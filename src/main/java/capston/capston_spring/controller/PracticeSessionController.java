@@ -4,6 +4,7 @@ import capston.capston_spring.dto.CustomUserDetails;
 import capston.capston_spring.dto.PracticeSessionResponse;
 import capston.capston_spring.entity.PracticeSession;
 import capston.capston_spring.service.PracticeSessionService;
+import capston.capston_spring.service.AccuracySessionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +20,7 @@ import java.util.stream.Collectors;
 public class PracticeSessionController {
 
     private final PracticeSessionService practiceSessionService;
+    private final AccuracySessionService accuracySessionService;
 
     /** 전체 연습 세션 조회 - DTO 변환 적용 **/
     @GetMapping("/user/me")
@@ -88,6 +90,18 @@ public class PracticeSessionController {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             // 예기치 못한 서버 에러
+            return ResponseEntity.status(500).body(Map.of("error", "Internal Server Error"));
+        }
+    }
+
+    /** 연습 모드 실루엣 영상 URL 반환 **/
+    @GetMapping("/video-paths")
+    public ResponseEntity<?> getPracticeVideoPathsBySongTitle(@RequestParam("songName") String songName) {
+        try {
+            return ResponseEntity.ok(accuracySessionService.getVideoPathsBySongTitle(songName)); // 정확도 서비스에서 재사용
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", "Internal Server Error"));
         }
     }
