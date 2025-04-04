@@ -1,6 +1,7 @@
 package capston.capston_spring.service;
 
 import capston.capston_spring.dto.ChallengeSessionDto;
+import capston.capston_spring.dto.ChallengeSessionResponse; // 추가
 import capston.capston_spring.entity.AppUser;
 import capston.capston_spring.entity.ChallengeSession;
 import capston.capston_spring.entity.Song;
@@ -46,8 +47,8 @@ public class ChallengeSessionService {
         ChallengeSession session = new ChallengeSession();
         session.setUser(user);
         session.setSong(song);
-        session.setStartTime(dto.getStartTime());
-        session.setEndTime(dto.getEndTime());
+        session.setStartTime(song.getHighlightStartTime()); // 수정: int
+        session.setEndTime(song.getHighlightEndTime());     // int
 
         return session;
     }
@@ -71,6 +72,49 @@ public class ChallengeSessionService {
         return challengeSessionRepository.findByUserIdAndSongId(user.getId(), song.getId());
     }
 
+    // 추가: ChallengeSessionResponse DTO를 반환하도록 구조 변경
+    // ChallengeSessionResponse 생성 시 LocalDateTime 대신 int 사용
+    public List<ChallengeSessionResponse> getChallengeSessionsWithSong(String username, Long songId) {
+        AppUser user = getUserByUsername(username);
+        List<ChallengeSession> sessions;
+
+        if (songId == null) {
+            sessions = challengeSessionRepository.findByUserId(user.getId());
+        } else {
+            Song song = getSongById(songId);
+            sessions = challengeSessionRepository.findByUserIdAndSongId(user.getId(), song.getId());
+        }
+
+        return sessions.stream()
+                .map(session -> {
+                    int startTime = session.getStartTime();  // int로 변경
+                    int endTime = session.getEndTime();      // int로 변경
+                    String duration = formatDuration(startTime, endTime);
+
+                    // 응답에 필요한 song 정보만 SongInfo로 래핑
+                    ChallengeSessionResponse.SongInfo songInfo = new ChallengeSessionResponse.SongInfo(
+                            session.getSong().getId(),
+                            session.getSong().getTitle()
+                    );
+
+                    return new ChallengeSessionResponse(
+                            session.getId(),
+                            songInfo,
+                            startTime,   // int로 변경
+                            endTime,     // int로 변경
+                            duration
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+     // 추가: startTime, endTime 기준으로 duration 문자열 계산 (MM:SS 형식)
+     private String formatDuration(int start, int end) {
+        int durationSec = end - start;
+        int minutes = durationSec / 60;
+        int seconds = durationSec % 60;
+        return String.format("%02d:%02d", minutes, seconds);
+     }
 
     /** 챌린지에서 사용할 배경 (배경 이미지 또는 아바타) **/
     public String getChallengeBackground(Long songId) {
@@ -85,14 +129,28 @@ public class ChallengeSessionService {
         return avatarPath;
     }
 
-    /** 챌린지에서 사용할 노래의 하이라이트 부분 반환 (DB에서 동적 가져오기) **/
-    public String getHighlightPart(Long songId) {
+    // 0403 챌린지 모드 시간 하이라이트에서 가져오는걸로 수정 + 실패 응답 메시지 수정
+    /** 챌린지 하이라이트 시간 문자열 반환 + 세션 저장 **/
+    public String getHighlightPart(Long songId, String username) {
+        AppUser user = getUserByUsername(username);
         Song song = getSongById(songId);
-        if (song.getHighlightStartTime() == 0 || song.getHighlightEndTime() == 0) {
-            return "No highlight part available"; // 메시지도 영어로 변경
+
+        int startTime = song.getHighlightStartTime();
+        int endTime = song.getHighlightEndTime();
+
+        if (startTime == 0 && endTime == 0) {
+            throw new IllegalArgumentException("Highlight part is not defined for this song.");
         }
+
+        ChallengeSession session = new ChallengeSession();
+        session.setUser(user);
+        session.setSong(song);
+        session.setStartTime(startTime);
+        session.setEndTime(endTime);
+        challengeSessionRepository.save(session);
+
         return String.format("%02d:%02d-%02d:%02d",
-                song.getHighlightStartTime() / 60, song.getHighlightStartTime() % 60,
-                song.getHighlightEndTime() / 60, song.getHighlightEndTime() % 60);
+                startTime / 60, startTime % 60,
+                endTime / 60, endTime % 60);
     }
 }
