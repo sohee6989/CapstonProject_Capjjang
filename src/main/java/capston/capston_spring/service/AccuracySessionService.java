@@ -138,6 +138,7 @@ public class AccuracySessionService {
         return paths;
     }
 
+    //0403 수정: 챌린지 세션 시간은 하이라이트 그대로 받아오기
     /** 정확도 세션 시작 - mode (full/highlight) 에 따라 자동 시간 설정 후 저장 **/
     public AccuracySession startAccuracySessionByUsername(String username, Long songId, String mode) {
         AppUser user = getUserByUsername(username);
@@ -167,4 +168,4 @@ public class AccuracySessionService {
         return accuracySessionRepository.save(session);
     }
 }
-/** 사용자 연습 기록 조회 getUserAccuracyHistory (수정 : 메서드 삭제) **/
+    /** 사용자 연습 기록 조회 getUserAccuracyHistory (수정 : 메서드 삭제) **/
