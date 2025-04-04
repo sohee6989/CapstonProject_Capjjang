@@ -77,12 +77,13 @@ public class SongController {
 
     /** 곡의 댄스 가이드 영상 및 구간 정보 조회 **/
     @GetMapping("/{songId}/song-info")
-    public ResponseEntity<Map<String, Object>> getPracticeInfo(@PathVariable Long songId, @RequestParam(name = "mode", required = false) String mode) {
-        String danceGuidePath = songService.getDanceGuidePath(songId);
+    public ResponseEntity<Map<String, Object>> getPracticeInfo(@PathVariable Long songId,
+                                                               @RequestParam(name = "mode", required = false) String mode) {
+        String silhouetteVideoUrl = songService.getSilhouetteVideoPath(songId);
         Optional<Object[]> practiceSections = songService.getPracticeSections(songId);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("danceGuidePath", danceGuidePath);
+        response.put("silhouetteVideoUrl", silhouetteVideoUrl); // key 이름도 변경
 
         if (practiceSections.isPresent()) {
             Object[] sections = practiceSections.get();
