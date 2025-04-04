@@ -44,12 +44,12 @@ public class Song {
     @Column
     private Integer  highlightEndTime; // 하이라이트 끝나는 시간
 
-    @Column
-    private Integer  challengeStartTime; // 챌린지 구간 시작 시간
-
-    @Column
-    private Integer  challengeEndTime; // 챌린지 구간 끝나는 시간
-
+//    @Column
+//    private Integer  challengeStartTime; // 챌린지 구간 시작 시간
+//
+//    @Column
+//    private Integer  challengeEndTime; // 챌린지 구간 끝나는 시간
+    
     /** 파일 경로 관련 필드 **/
     @Column
     private String audioFilePath; // 오디오 파일 경로
