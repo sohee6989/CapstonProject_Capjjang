@@ -28,8 +28,13 @@ public class ChallengeSession {
     private Song song;
 
     @Column(nullable = false)
-    private LocalDateTime startTime;
+    private int startTime;  // 수정: int로 변경
 
     @Column(nullable = false)
-    private LocalDateTime endTime;
+    private int endTime;    // int로 변경
+
+    // duration 계산 메서드 추가
+    public String getDuration() {
+        int duration = endTime - startTime;
+        return String.valueOf(duration);  // 또는 duration + "초"
 }
