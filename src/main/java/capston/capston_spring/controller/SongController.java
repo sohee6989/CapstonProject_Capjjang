@@ -83,7 +83,7 @@ public class SongController {
         Optional<Object[]> practiceSections = songService.getPracticeSections(songId);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("silhouetteVideoUrl", silhouetteVideoUrl); // key 이름도 변경
+        response.put("silhouetteVideoUrl", silhouetteVideoUrl);  // key 이름도 변경
 
         if (practiceSections.isPresent()) {
             Object[] sections = practiceSections.get();
