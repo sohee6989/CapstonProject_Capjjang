@@ -3,8 +3,6 @@ package capston.capston_spring.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Getter
 @Setter
@@ -37,4 +35,5 @@ public class ChallengeSession {
     public String getDuration() {
         int duration = endTime - startTime;
         return String.valueOf(duration);  // 또는 duration + "초"
+    }
 }

@@ -1,7 +1,7 @@
 package capston.capston_spring.service;
 
 import capston.capston_spring.dto.ChallengeSessionDto;
-import capston.capston_spring.dto.ChallengeSessionResponse; // 추가
+import capston.capston_spring.dto.ChallengeSessionResponse;
 import capston.capston_spring.entity.AppUser;
 import capston.capston_spring.entity.ChallengeSession;
 import capston.capston_spring.entity.Song;
@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
