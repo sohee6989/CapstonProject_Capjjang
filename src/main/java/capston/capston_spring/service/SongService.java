@@ -34,6 +34,13 @@ public class SongService {
                 .orElseThrow(() -> new RuntimeException("Dance guide video not found for song ID: " + songId));
     }
 
+    // 0404 추가: 특정 곡의 실루엣 영상 경로 조회 메서드
+    public String getSilhouetteVideoPath(Long songId) {
+        Song song = songRepository.findById(songId)
+                .orElseThrow(() -> new RuntimeException("Song not found with ID: " + songId));
+        return song.getSilhouetteVideoPath(); // ← Song 엔티티에 있는 필드 기준!
+    }
+
     /** 특정 곡의 1절/하이라이트 구간 조회 **/
     public Optional<Object[]> getPracticeSections(Long songId) {
         return songRepository.findPracticeSectionsById(songId);
@@ -42,7 +49,7 @@ public class SongService {
     /** 제목 또는 가수로 노래 검색 (검색용 DTO 반환) **/
     public List<Song> searchSongs(String title, String artist) {
         if (title != null && artist != null) {
-            return songRepository.findByTitleContainingIgnoreCaseAndArtistContainingIgnoreCase(title, artist); // ✅ 수정됨
+            return songRepository.findByTitleContainingIgnoreCaseAndArtistContainingIgnoreCase(title, artist); // 수정됨
         } else if (title != null) {
             return songRepository.findByTitleContainingIgnoreCase(title); // 수정됨
         } else if (artist != null) {
@@ -61,8 +68,6 @@ public class SongService {
 
         // JWT 토큰에서 사용자 정보 추출
         String username = getAuthenticatedUsername();
-
-        // 생성자 정보 설정 (createdBy 필드가 있다고 가정)
         song.setCreatedBy(username); // 수정됨
 
         return songRepository.save(song);
