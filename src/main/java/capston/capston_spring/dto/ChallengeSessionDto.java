@@ -9,6 +9,6 @@ import java.time.LocalDateTime;
 @Setter
 public class ChallengeSessionDto {
     private Long songId;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+//    private LocalDateTime startTime;
+//    private LocalDateTime endTime;
 }
