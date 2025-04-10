@@ -10,7 +10,7 @@ import capston.capston_spring.service.VideoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal; // 수정됨
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -49,8 +49,11 @@ public class VideoController {
     /**
      * 특정 세션의 녹화 영상 조회 (연습, 챌린지, 정확도 포함)
      **/
-    @GetMapping("/session/{sessionId}")
-    public ResponseEntity<List<MyVideoResponse>> getVideosBySession(@PathVariable Long sessionId, @RequestParam VideoMode mode) {
+    @GetMapping("/session") // 수정된 부분: {sessionId} -> /session?sessionId= 쿼리 파라미터로 수정
+    public ResponseEntity<List<MyVideoResponse>> getVideosBySession(
+            @RequestParam Long sessionId, // 수정된 부분: sessionId를 쿼리 파라미터로 받음
+            @RequestParam VideoMode mode
+    ) {
         return ResponseEntity.ok(videoService.getVideosBySession(sessionId, mode));
     }
 
@@ -72,7 +75,7 @@ public class VideoController {
             @PathVariable("videoId") Long videoId
     ) {
         if (file.isEmpty() || file.getSize() == 0) {
-            return ResponseEntity.badRequest().body("Uploaded file is empty."); // 메시지 영어로 변경
+            return ResponseEntity.badRequest().body("Uploaded file is empty.");
         }
         return videoService.editVideo(videoId, file);
     }

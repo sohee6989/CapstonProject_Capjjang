@@ -51,12 +51,13 @@ public class AccuracySessionController {
     public ResponseEntity<?> analyzeAndSaveSession(
             @AuthenticationPrincipal CustomUserDetails user, // userId 대신 토큰에서 유저 정보
             @RequestParam Long songId,
-            @RequestParam String videoPath
+            @RequestParam String videoPath,
+            @RequestParam Long sessionId
     ) {
         try {
             String username = user.getUsername(); // username 추출
             return ResponseEntity.ok(
-                    accuracySessionService.analyzeAndSaveSessionByUsername(username, songId, videoPath) // 수정된 서비스 메서드 호출
+                    accuracySessionService.analyzeAndSaveSessionByUsername(username, songId, videoPath, sessionId) // 수정된 서비스 메서드 호출
             );
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
@@ -81,8 +82,9 @@ public class AccuracySessionController {
     }
 
     /** (특정 세션 ID로) 정확도 세션 상세 조회 **/
-    @GetMapping("/{sessionId}/result")
-    public ResponseEntity<?> getSessionResult(@PathVariable Long sessionId) {
+    // 수정된 부분: @PathVariable -> @RequestParam
+    @GetMapping("/result")  // 변경된 부분: 경로에서 /{sessionId}/result -> /result로 변경
+    public ResponseEntity<?> getSessionResult(@RequestParam Long sessionId) {  // 변경된 부분: sessionId를 쿼리 파라미터로 받기
         try {
             return accuracySessionService.getSessionById(sessionId)
                     .map(session -> ResponseEntity.ok(
@@ -111,10 +113,11 @@ public class AccuracySessionController {
     /** 1절 정확도 연습 시작 - 세션 객체 반환 **/
     @PostMapping("/full")
     public ResponseEntity<?> startFullAccuracySession(@AuthenticationPrincipal CustomUserDetails user,
-                                                      @RequestParam Long songId) {
+                                                      @RequestParam Long songId,
+                                                      @RequestParam Long sessionId) {  // sessionId 추가
         try {
             String username = user.getUsername();
-            AccuracySession session = accuracySessionService.startAccuracySessionByUsername(username, songId, "full");
+            AccuracySession session = accuracySessionService.startAccuracySessionByUsername(username, songId, "full", sessionId);
             return ResponseEntity.ok(AccuracySessionResponse.fromEntity(session));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
@@ -126,10 +129,11 @@ public class AccuracySessionController {
     /** 하이라이트 정확도 연습 시작 - 세션 객체 반환 **/
     @PostMapping("/highlight")
     public ResponseEntity<?> startHighlightAccuracySession(@AuthenticationPrincipal CustomUserDetails user,
-                                                           @RequestParam Long songId) {
+                                                           @RequestParam Long songId,
+                                                           @RequestParam Long sessionId) {  // sessionId 추가
         try {
             String username = user.getUsername();
-            AccuracySession session = accuracySessionService.startAccuracySessionByUsername(username, songId, "highlight");
+            AccuracySession session = accuracySessionService.startAccuracySessionByUsername(username, songId, "highlight", sessionId);
             return ResponseEntity.ok(AccuracySessionResponse.fromEntity(session));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));

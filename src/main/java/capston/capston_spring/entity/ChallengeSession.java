@@ -8,7 +8,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString   // 디버깅관련
+@ToString   // 디버깅 관련
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class ChallengeSession {
 
@@ -25,15 +25,25 @@ public class ChallengeSession {
     @JoinColumn(name = "song_id", nullable = false)
     private Song song;
 
+    // 세션 ID 추가
     @Column(nullable = false)
-    private int startTime;  // 수정: int로 변경
+    private Long sessionId;  // sessionId 필드 추가
 
     @Column(nullable = false)
-    private int endTime;    // int로 변경
+    private int startTime;  // 하이라이트 시간으로 설정됨
 
-    // duration 계산 메서드 추가
+    @Column(nullable = false)
+    private int endTime;    // 하이라이트 시간으로 설정됨
+
+    // 하이라이트 시간 반영 메서드 추가
+    public void setHighlightTimesFromSong() {
+        this.startTime = this.song.getHighlightStartTime();
+        this.endTime = this.song.getHighlightEndTime();
+    }
+
+    // duration 계산 메서드
     public String getDuration() {
         int duration = endTime - startTime;
-        return String.valueOf(duration);  // 또는 duration + "초"
+        return duration + "초";  // duration을 "초" 단위로 반환
     }
 }

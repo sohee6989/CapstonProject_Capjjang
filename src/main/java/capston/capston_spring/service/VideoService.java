@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.RequestParam;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -58,8 +59,9 @@ public class VideoService {
                 .collect(Collectors.toList());
     }
 
+    // 기존 메소드에서 sessionId를 쿼리 파라미터로 받도록 수정
     /** 특정 세션의 영상 조회 **/
-    public List<MyVideoResponse> getVideosBySession(Long sessionId, VideoMode mode) {
+    public List<MyVideoResponse> getVideosBySession(@RequestParam Long sessionId, @RequestParam VideoMode mode) { // 수정된 부분
         List<RecordedVideo> videos = switch (mode) {
             case PRACTICE -> recordedVideoRepository.findByPracticeSessionId(sessionId);
             case CHALLENGE -> recordedVideoRepository.findByChallengeSessionId(sessionId);
@@ -85,25 +87,26 @@ public class VideoService {
     }
 
     /** 특정 연습 모드 녹화 영상 조회 **/
-    public List<RecordedVideo> getRecordedVideosByPracticeSession(Long sessionId) {
+    public List<RecordedVideo> getRecordedVideosByPracticeSession(@RequestParam Long sessionId) { // 수정된 부분
         PracticeSession practiceSession = practiceSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Practice session not found with ID: " + sessionId));
         return recordedVideoRepository.findByPracticeSession(practiceSession);
     }
 
     /** 특정 챌린지 모드 녹화 영상 조회 **/
-    public List<RecordedVideo> getRecordedVideosByChallengeSession(Long sessionId) {
+    public List<RecordedVideo> getRecordedVideosByChallengeSession(@RequestParam Long sessionId) { // 수정된 부분
         ChallengeSession challengeSession = challengeSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Challenge session not found with ID: " + sessionId));
         return recordedVideoRepository.findByChallengeSession(challengeSession);
     }
 
     /** 특정 정확도 모드 녹화 영상 조회 **/
-    public List<RecordedVideo> getRecordedVideosByAccuracySession(Long sessionId) {
+    public List<RecordedVideo> getRecordedVideosByAccuracySession(@RequestParam Long sessionId) { // 수정된 부분
         AccuracySession accuracySession = accuracySessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Accuracy session not found with ID: " + sessionId));
         return recordedVideoRepository.findByAccuracySession(accuracySession);
     }
+
 
     /** 녹화된 영상 저장하고, RecordedVideo 엔티티로 변환 후 저장 (S3 업로드) **/
     public RecordedVideo saveRecordedVideo(RecordedVideoDto dto, MultipartFile file, String username) {

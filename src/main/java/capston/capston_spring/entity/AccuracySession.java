@@ -47,6 +47,10 @@ public class AccuracySession {
     @Column(nullable = false)
     private String mode;
 
+    // 세션 ID 추가
+    @Column(nullable = false)
+    private Long sessionId;  // sessionId 필드 추가
+
     // 생성 시간 자동 저장
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -85,7 +89,7 @@ public class AccuracySession {
 
     /** 추가된 부분: mode 포함 생성자 (id, createdAt 제외) **/
     public AccuracySession(AppUser user, Song song, LocalDateTime startTime, LocalDateTime endTime,
-                           Double score, String feedback, String accuracyDetails, String mode) {
+                           Double score, String feedback, String accuracyDetails, String mode, Long sessionId) {
         this.user = user;
         this.song = song;
         this.startTime = startTime;
@@ -94,6 +98,7 @@ public class AccuracySession {
         this.feedback = feedback;
         this.accuracyDetails = accuracyDetails;
         this.mode = mode;
+        this.sessionId = sessionId;
         this.createdAt = LocalDateTime.now(); // 자동으로 생성 시간 설정
     }
 }

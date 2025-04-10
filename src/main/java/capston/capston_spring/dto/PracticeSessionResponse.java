@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 @Getter
 @AllArgsConstructor
 public class PracticeSessionResponse {
-    private Long sessionId;
     private UserInfo user;
     private SongInfo song;
     private String mode;
@@ -63,7 +62,6 @@ public class PracticeSessionResponse {
         );
 
         return new PracticeSessionResponse(
-                session.getId(),
                 UserInfo.from(session.getUser()),
                 SongInfo.from(song),
                 mode.toLowerCase(),

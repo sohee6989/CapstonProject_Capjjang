@@ -11,7 +11,7 @@ import capston.capston_spring.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,8 +55,20 @@ public class ChallengeSessionService {
     }
 
     /** 챌린지 세션 저장 (점수 분석 없이 저장) **/
+    // ChallengeSession 생성 시 하이라이트 시간을 자동으로 설정
     public ChallengeSession saveChallengeSession(ChallengeSessionDto dto, String username) {
-        ChallengeSession session = convertToEntity(dto, username);
+        AppUser user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+
+        Song song = songRepository.findById(dto.getSongId())
+                .orElseThrow(() -> new RuntimeException("Song not found with ID: " + dto.getSongId()));
+
+        ChallengeSession session = new ChallengeSession();
+        session.setUser(user);
+        session.setSong(song);
+        session.setSessionId(dto.getSessionId());
+        session.setHighlightTimesFromSong(); // 하이라이트 시간 설정
+
         return challengeSessionRepository.save(session);
     }
 
@@ -73,7 +85,11 @@ public class ChallengeSessionService {
         return challengeSessionRepository.findByUserIdAndSongId(user.getId(), song.getId());
     }
 
-    // 추가: ChallengeSessionResponse DTO를 반환하도록 구조 변경
+    /** 세션 ID로 챌린지 세션 조회 **/
+    public Optional<ChallengeSession> getSessionById(Long sessionId) {
+        return challengeSessionRepository.findById(sessionId); // Optional<ChallengeSession> 반환
+    }
+
     // ChallengeSessionResponse 생성 시 LocalDateTime 대신 int 사용
     public List<ChallengeSessionResponse> getChallengeSessionsWithSong(String username, Long songId) {
         AppUser user = getUserByUsername(username);
@@ -98,8 +114,14 @@ public class ChallengeSessionService {
                             session.getSong().getTitle()
                     );
 
+                    // user 정보도 포함시켜서 전달
+                    ChallengeSessionResponse.UserInfo userInfo = new ChallengeSessionResponse.UserInfo(
+                            session.getUser().getUsername()  // UserInfo 객체 생성
+                    );
+
                     return new ChallengeSessionResponse(
                             session.getId(),
+                            userInfo,   // userInfo 전달
                             songInfo,
                             startTime,   // int로 변경
                             endTime,     // int로 변경

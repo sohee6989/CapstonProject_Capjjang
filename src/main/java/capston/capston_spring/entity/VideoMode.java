@@ -14,6 +14,4 @@ public enum VideoMode {
     public String getDescription() {
         return description;
     }
-    // PRACTICE,  // 연습 모드
-    // CHALLENGE  // 챌린지 모드
 }

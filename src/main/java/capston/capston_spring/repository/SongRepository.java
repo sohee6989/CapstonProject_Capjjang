@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SongRepository extends JpaRepository<Song, Long> {
+
     /** 제목에 특정 키워드가 포함된 곡 조회 (대소문자 구분 없이) **/
     List<Song> findByTitleContainingIgnoreCase(String title);
 
@@ -18,7 +19,6 @@ public interface SongRepository extends JpaRepository<Song, Long> {
     /** 제목과 아티스트 둘 다 포함하는 곡 조회 **/
     List<Song> findByTitleContainingIgnoreCaseAndArtistContainingIgnoreCase(String title, String artist);
 
-    //    List<Song> findByMode(String mode);
     /** 곡의 danceGuidePath(안무 가이드 영상 URL) 조회 **/
     @Query("SELECT s.danceGuidePath FROM Song s WHERE s.id = :id")
     Optional<String> findDanceGuidePathById(@Param("id") Long id);

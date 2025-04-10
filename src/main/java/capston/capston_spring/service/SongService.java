@@ -73,7 +73,6 @@ public class SongService {
         return songRepository.save(song);
     }
 
-
     // 인증된 사용자 이름 가져오기
     private String getAuthenticatedUsername() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();

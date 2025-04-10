@@ -31,7 +31,7 @@ public class AccuracySessionService {
     @Value("${flask.api.analyze}")
     private String flaskAnalyzeUrl;
 
-    /** ID 기반 곡 조회 (곡 조회는 계속 사용됨) **/
+    /** ID 기반 곡 조회 **/
     private Song getSongById(Long songId) {
         return songRepository.findById(songId)
                 .orElseThrow(() -> new SongNotFoundException("Song not found: " + songId));
@@ -86,12 +86,18 @@ public class AccuracySessionService {
     }
 
     /** 정확도 분석 후 결과 저장 (Flask 연동 유지) **/
-    public AccuracySession analyzeAndSaveSessionByUsername(String username, Long songId, String videoPath) {
+    public AccuracySession analyzeAndSaveSessionByUsername(String username, Long songId, String videoPath, Long sessionId) {
         AppUser user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + username)); // 예외 처리 복원
 
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new SongNotFoundException("Song not found: " + songId)); // 예외 처리 복원
+
+        // sessionId -> 특정 세션을 조회하거나 처리할 수 있음
+        Optional<AccuracySession> existingSession = accuracySessionRepository.findById(sessionId);
+        if (existingSession.isPresent()) {
+            // 이미 존재하는 sessionId에 대한 로직 처리
+        }
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
@@ -102,6 +108,7 @@ public class AccuracySessionService {
         requestBody.put("song_id", songId);
         requestBody.put("video_path", videoPath);
         requestBody.put("song_title", song.getTitle());
+        requestBody.put("session_id", sessionId);
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
         ResponseEntity<Map> response = restTemplate.exchange(flaskAnalyzeUrl, HttpMethod.POST, request, Map.class);
@@ -140,7 +147,7 @@ public class AccuracySessionService {
 
     //0403 수정: 챌린지 세션 시간은 하이라이트 그대로 받아오기
     /** 정확도 세션 시작 - mode (full/highlight) 에 따라 자동 시간 설정 후 저장 **/
-    public AccuracySession startAccuracySessionByUsername(String username, Long songId, String mode) {
+    public AccuracySession startAccuracySessionByUsername(String username, Long songId, String mode, Long sessionId) {
         AppUser user = getUserByUsername(username);
         Song song = getSongById(songId);
 
@@ -164,8 +171,10 @@ public class AccuracySessionService {
         session.setScore(0.0); // 초기 점수
         session.setFeedback(null); // 초기 피드백 없음
         session.setAccuracyDetails(null); // 초기 상세 없음
+        session.setSessionId(sessionId); // sessionId 설정
 
         return accuracySessionRepository.save(session);
     }
+
 }
     /** 사용자 연습 기록 조회 getUserAccuracyHistory (수정 : 메서드 삭제) **/

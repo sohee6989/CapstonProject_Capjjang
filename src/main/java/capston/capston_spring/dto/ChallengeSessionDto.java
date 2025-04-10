@@ -8,7 +8,10 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class ChallengeSessionDto {
+    private Long sessionId;  // sessionId 필드
     private Long songId;
-//    private LocalDateTime startTime;
-//    private LocalDateTime endTime;
+
+    public Long getSessionId() {
+        return this.sessionId;
+    }
 }
