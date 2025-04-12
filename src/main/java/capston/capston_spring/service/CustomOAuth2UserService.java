@@ -23,7 +23,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private final UserRepository userRepository;
 
     /** 사용자 프로필 이미지 경로 **/
-    private static final String PROFILE_IMAGE_DIR = "resources\\static\\profile_images\\";
+    private static final String PROFILE_IMAGE_DIR = "https://danzle-s3-bucket.s3.ap-northeast-2.amazonaws.com/profile_images/";
     private static final String DEFAULT_PROFILE_IMAGE = PROFILE_IMAGE_DIR + "defaultUserIcon.jpg";
 
     @Override

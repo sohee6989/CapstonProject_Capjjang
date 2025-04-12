@@ -126,8 +126,8 @@ public class PracticeSessionService {
                 .orElseThrow(() -> new IllegalArgumentException("Song not found: " + songTitle));
 
         Map<String, String> paths = new HashMap<>();
-        paths.put("danceGuideUrl", "http://43.200.171.252:5000/static/output/" + song.getDanceGuidePath());
-        paths.put("silhouetteVideoUrl", "http://43.200.171.252:5000/static/output/" + song.getSilhouetteVideoPath());
+        paths.put("danceGuideUrl", song.getDanceGuidePath());
+        paths.put("silhouetteVideoUrl", song.getSilhouetteVideoPath());
         return paths;
     }
 }
