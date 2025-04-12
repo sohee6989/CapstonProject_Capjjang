@@ -15,7 +15,7 @@ cv2.setUseOptimized(True)
 cv2.setNumThreads(4)
 
 # 비율 유지하면서 프레임 리사이즈 (여백 추가)
-def resize_with_aspect_ratio(image, target_width, target_height):
+def resize_with_aspect_ratio(image, target_width, target_height): 
     h, w = image.shape[:2]
     scale = min(target_width / w, target_height / h)
     new_w = int(w * scale)
@@ -51,6 +51,9 @@ def process_and_compare_videos(*, song_title):
     display_duration = 1.5 # 점수 표시 유지 시간 (초)
     score_display_time = time.time()  # 점수 표시 시작 시간
 
+    # 실루엣, 사용자, 전문가 프레임 확대 크기 지정 (기존보다 크게, 모바일 맞춤)
+    TARGET_WIDTH = 680      # 기존 640 → 680
+    TARGET_HEIGHT = 1200
 
     with mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
         while cap_expert.isOpened() and cap_webcam.isOpened():
@@ -58,26 +61,22 @@ def process_and_compare_videos(*, song_title):
             ret_cam, frame_cam = cap_webcam.read()
             ret_sil, frame_sil = cap_silhouette.read()
 
-            frame_cam = cv2.flip(frame_cam, 1)  # [수정] 여기에 flip 추가
+            frame_cam = cv2.flip(frame_cam, 1)
 
             if not ret_expert or not ret_cam:
                 break
 
-            # 실루엣 영상 루프 재생
             if not ret_sil:
                 cap_silhouette.set(cv2.CAP_PROP_POS_FRAMES, 0)
                 ret_sil, frame_sil = cap_silhouette.read()
                 if not ret_sil:
                     continue
 
-            # 프레임 비율 유지하면서 리사이즈
-            TARGET_WIDTH = 680
-            TARGET_HEIGHT = 1200    # 모바일 세로 화면에 맞춤
+            # 사용자 쪽에 실루엣 오버레이: 전문가 프레임 리사이즈 누락되어 추가
+            frame_expert_resized = resize_with_aspect_ratio(frame_expert, TARGET_WIDTH, TARGET_HEIGHT)  # ✅ 추가됨
+            frame_cam_resized = resize_with_aspect_ratio(frame_cam, TARGET_WIDTH, TARGET_HEIGHT)        # ✅ 사이즈 확대됨
+            frame_silhouette_resized = resize_with_aspect_ratio(frame_sil, TARGET_WIDTH, TARGET_HEIGHT) # ✅ 사이즈 확대됨
 
-            frame_cam_resized = resize_with_aspect_ratio(frame_cam, TARGET_WIDTH, TARGET_HEIGHT)
-            frame_silhouette_resized = resize_with_aspect_ratio(frame_sil, TARGET_WIDTH, TARGET_HEIGHT)
-
-            # 사용자 쪽에 실루엣 오버레이
             blended_user = cv2.addWeighted(frame_cam_resized, 0.5, frame_silhouette_resized, 0.5, 0)
 
             frame_expert_rgb = cv2.cvtColor(frame_expert_resized, cv2.COLOR_BGR2RGB)
@@ -92,18 +91,14 @@ def process_and_compare_videos(*, song_title):
             # 1.5초 간격으로 점수 계산
             if current_time - last_score_time >= score_interval:
                 if result_expert.pose_landmarks and result_amateur.pose_landmarks:
-                    # 전문가와 사용자 키포인트 추출
                     expert_keypoints = np.array([[lmk.x, lmk.y, lmk.z] for lmk in result_expert.pose_landmarks.landmark])
                     amateur_keypoints = np.array([[lmk.x, lmk.y, lmk.z] for lmk in result_amateur.pose_landmarks.landmark])
-                
-                    # 1차원 벡터로 변환
+
                     expert_keypoints_flat = expert_keypoints.flatten()
                     amateur_keypoints_flat = amateur_keypoints.flatten()
-                
-                    # DTW 거리 계산
+
                     distance, _ = fastdtw(expert_keypoints_flat[:, np.newaxis], amateur_keypoints_flat[:, np.newaxis], dist=euclidean)
 
-                    # 점수 계산
                     max_distance = 5.5
                     score = max(100 - (distance / max_distance) * 100, 0)
 
@@ -132,14 +127,11 @@ def process_and_compare_videos(*, song_title):
                     score_display_time = current_time
 
             if last_score is not None and last_feedback is not None and current_time - score_display_time <= display_duration:
-                # 마지막 점수와 피드백을 일정 시간 동안 표시
                 cv2.putText(blended_user, f"Score: {last_score:.2f}", (50, 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 cv2.putText(blended_user, last_feedback, (50, 100),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-            # 두 영상 나란히 보기
-            # combined_frame = cv2.hconcat([frame_expert_resized, blended_user])
             # 결합된 프레임 출력
             cv2.imshow("Accuracy Mode", blended_user)
 
