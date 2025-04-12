@@ -5,6 +5,7 @@ import numpy as np
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 import time
+from s3_helper import download_temp_from_s3 
 
 # Mediapipe Pose 모델 초기화
 mp_pose = mp.solutions.pose
@@ -30,8 +31,7 @@ def resize_with_aspect_ratio(image, target_width, target_height):
     return padded
 
 def process_and_compare_videos(*, song_title):
-    expert_video_path = f"videos1/{song_title}_expert.mp4"  # 전문가 영상
-    silhouette_path = f"video_uploads/{song_title}_silhouette.mp4"  # 실루엣 영상
+    expert_video_path, silhouette_path = download_temp_from_s3(song_title)
 
     cap_expert = cv2.VideoCapture(expert_video_path)
     cap_webcam = cv2.VideoCapture(0)  # 사용자: 실시간 웹캠 입력
@@ -51,10 +51,6 @@ def process_and_compare_videos(*, song_title):
     display_duration = 1.5 # 점수 표시 유지 시간 (초)
     score_display_time = time.time()  # 점수 표시 시작 시간
 
-    # 실루엣, 사용자, 전문가 프레임 확대 크기 지정 (기존보다 크게, 모바일 맞춤)
-    TARGET_WIDTH = 680      # 기존 640 → 680
-    TARGET_HEIGHT = 1200
-
     with mp_pose.Pose(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
         while cap_expert.isOpened() and cap_webcam.isOpened():
             ret_expert, frame_expert = cap_expert.read()
@@ -72,10 +68,10 @@ def process_and_compare_videos(*, song_title):
                 if not ret_sil:
                     continue
 
-            # 사용자 쪽에 실루엣 오버레이: 전문가 프레임 리사이즈 누락되어 추가
-            frame_expert_resized = resize_with_aspect_ratio(frame_expert, TARGET_WIDTH, TARGET_HEIGHT)  # ✅ 추가됨
-            frame_cam_resized = resize_with_aspect_ratio(frame_cam, TARGET_WIDTH, TARGET_HEIGHT)        # ✅ 사이즈 확대됨
-            frame_silhouette_resized = resize_with_aspect_ratio(frame_sil, TARGET_WIDTH, TARGET_HEIGHT) # ✅ 사이즈 확대됨
+            # 사용자 쪽에 실루엣 오버레이
+            frame_expert_resized = resize_with_aspect_ratio(frame_expert, 640, 480)
+            frame_cam_resized = resize_with_aspect_ratio(frame_cam, 640, 480)
+            frame_silhouette_resized = resize_with_aspect_ratio(frame_sil, 640, 480)
 
             blended_user = cv2.addWeighted(frame_cam_resized, 0.5, frame_silhouette_resized, 0.5, 0)
 
