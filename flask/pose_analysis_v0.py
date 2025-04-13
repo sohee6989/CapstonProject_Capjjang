@@ -107,18 +107,16 @@ def process_and_compare_videos(*, song_title):
                     score = max(100 - (distance / max_distance) * 100, 0)
 
                     # 점수에 따른 피드백
-                    if score >= 95:
-                        feedback = "Perfect! Great job!"
-                    elif score >= 85:
-                        feedback = "Good! You're almost there!"
+                    if score >= 90:
+                        feedback = "Perfect"    # 멘트 정리(한단어로)
+                    elif score >= 80:
+                        feedback = "Good"
                     elif score >= 75:
-                        feedback = "Normal! Keep going!"
+                        feedback = "Normal"
                     elif score >= 60:
-                        feedback = "Nice try! You're getting there!"
-                    elif score > 15:
-                        feedback = "Good effort! Keep it up!"
+                        feedback = "Bad"
                     else:
-                        feedback = "It's Okay... Don't give up!"
+                        feedback = "Worst"
 
                     # 점수와 피드백 출력
                     cv2.putText(blended_user, f"Score: {score:.2f}", (50, 50),
@@ -139,10 +137,8 @@ def process_and_compare_videos(*, song_title):
                 cv2.putText(blended_user, last_feedback, (50, 100),
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-            # 두 영상 나란히 보기
-            combined_frame = cv2.hconcat([frame_expert_resized, blended_user])
             # 결합된 프레임 출력
-            cv2.imshow("Accuracy Mode", combined_frame)
+            cv2.imshow("Accuracy Mode", blended_user)
 
             # 종료 조건 (q 키를 누르면 종료)
             if cv2.waitKey(1) & 0xFF == ord('q'):
