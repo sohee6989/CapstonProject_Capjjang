@@ -96,7 +96,7 @@ def process_and_compare_videos(*, song_title):
 
                     distance, _ = fastdtw(expert_keypoints_flat[:, np.newaxis], amateur_keypoints_flat[:, np.newaxis], dist=euclidean)
 
-                    max_distance = 5.5
+                    max_distance = 15.0
                     score = max(100 - (distance / max_distance) * 100, 0)
 
                     # 점수에 따른 피드백
