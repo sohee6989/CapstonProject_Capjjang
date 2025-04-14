@@ -12,7 +12,7 @@ import capston.capston_spring.repository.AccuracySessionRepository;
 import capston.capston_spring.repository.SongRepository;
 import capston.capston_spring.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value; // application.properties 값 가져오기 위해 추가
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -95,9 +95,10 @@ public class AccuracySessionService {
 
         // sessionId -> 특정 세션을 조회하거나 처리할 수 있음
         Optional<AccuracySession> existingSession = accuracySessionRepository.findById(sessionId);
-        if (existingSession.isPresent()) {
-            // 이미 존재하는 sessionId에 대한 로직 처리
+        if (existingSession.isPresent()) {  // 이미 존재하는 sessionId에 대한 로직 처리
+            throw new IllegalArgumentException("Session ID already exists: " + sessionId);
         }
+
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
@@ -141,8 +142,20 @@ public class AccuracySessionService {
                 .orElseThrow(() -> new SongNotFoundException("Song not found with title: " + songTitle));
 
         Map<String, String> paths = new HashMap<>();
-        paths.put("silhouetteVideoUrl", song.getSilhouetteVideoPath());
+        paths.put("silhouetteVideoUrl", "http://43.200.171.252:5000/static/output/" + song.getSilhouetteVideoPath());
         return paths;
+    }
+
+    /** 정확도 세션 시작 - full 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
+    public List<AccuracySession> startFullAccuracySessionList(String username, Long songId, Long sessionId) {
+        AccuracySession session = startAccuracySessionByUsername(username, songId, "full", sessionId);
+        return List.of(session);
+    }
+
+    /** 정확도 세션 시작 - highlight 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
+    public List<AccuracySession> startHighlightAccuracySessionList(String username, Long songId, Long sessionId) {
+        AccuracySession session = startAccuracySessionByUsername(username, songId, "highlight", sessionId);
+        return List.of(session);
     }
 
     //0403 수정: 챌린지 세션 시간은 하이라이트 그대로 받아오기
