@@ -24,7 +24,7 @@ public class SongController {
         try {
             List<Song> songs;
             if (keyword != null && !keyword.isBlank()) {
-                songs = songService.searchSongs(keyword, keyword); // 제목 또는 아티스트에 keyword 포함된 노래 검색
+                songs = songService.searchSongs(keyword, keyword);
             } else {
                 songs = songService.getAllSongs();
             }
@@ -32,6 +32,7 @@ public class SongController {
             List<Map<String, Object>> songDtos = songs.stream()
                     .map(song -> {
                         Map<String, Object> songMap = new HashMap<>();
+                        songMap.put("id", song.getId());  // 0414 songId 추가
                         songMap.put("title", song.getTitle());
                         songMap.put("artist", song.getArtist());
                         songMap.put("coverImagePath", song.getCoverImagePath());
@@ -58,8 +59,9 @@ public class SongController {
         List<Map<String, Object>> songs = songService.searchSongs(title, artist).stream()
                 .map(song -> {
                     Map<String, Object> songMap = new HashMap<>();
-                    songMap.put("title", song.getTitle()); // 곡 제목
-                    songMap.put("artist", song.getArtist()); // 아티스트 이름
+                    songMap.put("id", song.getId()); // 0414 추가
+                    songMap.put("title", song.getTitle());
+                    songMap.put("artist", song.getArtist());
                     songMap.put("coverImagePath", song.getCoverImagePath()); // 커버 이미지 경로
                     return songMap;
                 })
