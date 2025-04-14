@@ -1,12 +1,10 @@
 # pose_analysis.py
-
 import cv2
 import mediapipe as mp
 import numpy as np
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
 import time
-from s3_helper import download_temp_from_s3 
 
 # Mediapipe Pose 모델 초기화
 mp_pose = mp.solutions.pose
@@ -32,7 +30,8 @@ def resize_with_aspect_ratio(image, target_width, target_height):
     return padded
 
 def process_and_compare_videos(*, song_title):
-    expert_video_path, silhouette_path = download_temp_from_s3(song_title)
+    expert_video_path = f"videos1/{song_title}_expert.mp4"  # 전문가 영상
+    silhouette_path = f"video_uploads/{song_title}_silhouette.mp4"  # 실루엣 영상
 
     cap_expert = cv2.VideoCapture(expert_video_path)
     cap_webcam = cv2.VideoCapture(0)  # 사용자: 실시간 웹캠 입력
@@ -69,7 +68,7 @@ def process_and_compare_videos(*, song_title):
                 if not ret_sil:
                     continue
 
-            # 사용자 쪽에 실루엣 오버레이
+            # 사용자 쪽에 실루엣 오버레이: 전문가 프레임 리사이즈 누락되어 추가
             frame_expert_resized = resize_with_aspect_ratio(frame_expert, 640, 480)
             frame_cam_resized = resize_with_aspect_ratio(frame_cam, 640, 480)
             frame_silhouette_resized = resize_with_aspect_ratio(frame_sil, 640, 480)
@@ -96,7 +95,7 @@ def process_and_compare_videos(*, song_title):
 
                     distance, _ = fastdtw(expert_keypoints_flat[:, np.newaxis], amateur_keypoints_flat[:, np.newaxis], dist=euclidean)
 
-                    max_distance = 15.0
+                    max_distance = 50.0     # 임의적으로 크게 조절 (폰 기준 고려)
                     score = max(100 - (distance / max_distance) * 100, 0)
 
                     # 점수에 따른 피드백
