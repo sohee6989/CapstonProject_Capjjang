@@ -61,16 +61,16 @@ public class PracticeSessionController {
      * 1절 연습 시작 - 세션 객체 반환
      **/
     @PostMapping("/full")
-    public ResponseEntity<?> startFullPractice(@AuthenticationPrincipal CustomUserDetails user,
-                                               @RequestParam Long songId) {
+    public ResponseEntity<List<PracticeSessionResponse>> startFullPractice(@AuthenticationPrincipal CustomUserDetails user,
+                                                                           @RequestParam Long songId) {
         try {
             String username = user.getUsername();
             PracticeSession session = practiceSessionService.startFullPracticeSessionByUsername(username, songId);
-            return ResponseEntity.ok(PracticeSessionResponse.fromEntity(session));
-        } catch (IllegalArgumentException e) { // 너가 직접 던진 예외만 받음
-            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.ok(List.of(PracticeSessionResponse.fromEntity(session))); // 0414 리스트로 반환
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body(null);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", "Internal Server Error"));
+            return ResponseEntity.status(500).body(null);
         }
     }
 
@@ -78,19 +78,16 @@ public class PracticeSessionController {
      * 하이라이트 연습 시작 - 세션 객체 반환
      **/
     @PostMapping("/highlight")
-    public ResponseEntity<?> startHighlightPractice(@AuthenticationPrincipal CustomUserDetails user,
-                                                    @RequestParam Long songId) {
+    public ResponseEntity<List<PracticeSessionResponse>> startHighlightPractice(@AuthenticationPrincipal CustomUserDetails user,
+                                                                                @RequestParam Long songId) {
         try {
             String username = user.getUsername();
             PracticeSession session = practiceSessionService.startHighlightPracticeSessionByUsername(username, songId);
-            return ResponseEntity.ok(PracticeSessionResponse.fromEntity(session));
-
+            return ResponseEntity.ok(List.of(PracticeSessionResponse.fromEntity(session))); // 0414 리스트로 반환
         } catch (IllegalArgumentException e) {
-            // 사용자 또는 곡이 없거나 mode가 잘못된 경우
-            return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
+            return ResponseEntity.status(400).body(null);
         } catch (Exception e) {
-            // 예기치 못한 서버 에러
-            return ResponseEntity.status(500).body(Map.of("error", "Internal Server Error"));
+            return ResponseEntity.status(500).body(null);
         }
     }
 
