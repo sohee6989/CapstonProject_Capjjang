@@ -142,7 +142,7 @@ public class AccuracySessionService {
                 .orElseThrow(() -> new SongNotFoundException("Song not found with title: " + songTitle));
 
         Map<String, String> paths = new HashMap<>();
-        paths.put("silhouetteVideoUrl", "http://43.200.171.252:5000/static/output/" + song.getSilhouetteVideoPath());
+        paths.put("silhouetteVideoUrl", song.getSilhouetteVideoPath());
         return paths;
     }
 
