@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -49,15 +50,15 @@ public class AccuracySessionController {
     /** Mediapipe 기반 점수 평가 실행 후 결과 저장 (Flask 연동) **/
     @PostMapping("/analyze")
     public ResponseEntity<?> analyzeAndSaveSession(
-            @AuthenticationPrincipal CustomUserDetails user, // userId 대신 토큰에서 유저 정보
+            @AuthenticationPrincipal CustomUserDetails user,
             @RequestParam Long songId,
             @RequestParam String videoPath,
             @RequestParam Long sessionId
     ) {
         try {
-            String username = user.getUsername(); // username 추출
+            String username = user.getUsername();
             return ResponseEntity.ok(
-                    accuracySessionService.analyzeAndSaveSessionByUsername(username, songId, videoPath, sessionId) // 수정된 서비스 메서드 호출
+                    accuracySessionService.analyzeAndSaveSessionByUsername(username, songId, videoPath,sessionId) // 수정된 서비스 메서드 호출
             );
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
@@ -110,15 +111,18 @@ public class AccuracySessionController {
         }
     }
 
-    /** 1절 정확도 연습 시작 - 세션 객체 반환 **/
+    /** 1절 정확도 연습 시작 - 세션 객체 리스트 반환 (0414 수정됨) **/
     @PostMapping("/full")
     public ResponseEntity<?> startFullAccuracySession(@AuthenticationPrincipal CustomUserDetails user,
                                                       @RequestParam Long songId,
-                                                      @RequestParam Long sessionId) {  // sessionId 추가
+                                                      @RequestParam Long sessionId) {
         try {
             String username = user.getUsername();
-            AccuracySession session = accuracySessionService.startAccuracySessionByUsername(username, songId, "full", sessionId);
-            return ResponseEntity.ok(AccuracySessionResponse.fromEntity(session));
+            List<AccuracySession> sessions = accuracySessionService.startFullAccuracySessionList(username, songId, sessionId); // 서비스 메서드 변경됨
+            List<AccuracySessionResponse> response = sessions.stream() // List로 응답 포맷 변경
+                    .map(AccuracySessionResponse::fromEntity)
+                    .toList();
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -126,15 +130,18 @@ public class AccuracySessionController {
         }
     }
 
-    /** 하이라이트 정확도 연습 시작 - 세션 객체 반환 **/
+    /** 하이라이트 정확도 연습 시작 - 세션 객체 리스트 반환 (0414 수정됨) **/
     @PostMapping("/highlight")
     public ResponseEntity<?> startHighlightAccuracySession(@AuthenticationPrincipal CustomUserDetails user,
                                                            @RequestParam Long songId,
-                                                           @RequestParam Long sessionId) {  // sessionId 추가
+                                                           @RequestParam Long sessionId) {
         try {
             String username = user.getUsername();
-            AccuracySession session = accuracySessionService.startAccuracySessionByUsername(username, songId, "highlight", sessionId);
-            return ResponseEntity.ok(AccuracySessionResponse.fromEntity(session));
+            List<AccuracySession> sessions = accuracySessionService.startHighlightAccuracySessionList(username, songId, sessionId); // 서비스 메서드 변경됨
+            List<AccuracySessionResponse> response = sessions.stream() // List로 응답 포맷 변경
+                    .map(AccuracySessionResponse::fromEntity)
+                    .toList();
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
