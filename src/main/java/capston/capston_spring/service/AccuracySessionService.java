@@ -107,13 +107,11 @@ public class AccuracySessionService {
         AppUser user = getUserByUsername(username);
         Song song = getSongById(songId);
 
-        log.info("Flask Analyze URL: {}", flaskAnalyzeUrl);
-
         AccuracySession session = accuracySessionRepository.findBySessionId(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("image", new MultipartInputStreamFileResource(image.getInputStream(), image.getOriginalFilename()));
+        body.add("frame", new MultipartInputStreamFileResource(image.getInputStream(), image.getOriginalFilename()));// 0415 "image" → "frame"
         body.add("song_title", song.getTitle());
         body.add("session_id", sessionId);
         body.add("frame_index", frameIndex);
@@ -179,22 +177,25 @@ public class AccuracySessionService {
 
     //0403 수정: 챌린지 세션 시간은 하이라이트 그대로 받아오기
     /** 정확도 세션 시작 - mode (full/highlight) 에 따라 자동 시간 설정 후 저장 **/
-    public AccuracySession startAccuracySession(String username, Long songId, String mode, Long sessionId) {
-            AppUser user = getUserByUsername(username);
-            Song song = getSongById(songId);
+    public AccuracySession startAccuracySession(String username, Long songId, String mode) {
+        AppUser user = getUserByUsername(username);
+        Song song = getSongById(songId);
 
-            int startSec, endSec;
-            if (mode.equalsIgnoreCase("full")) {
-                startSec = song.getFullStartTime();
-                endSec = song.getFullEndTime();
-            } else if (mode.equalsIgnoreCase("highlight")) {
-                startSec = song.getHighlightStartTime();
-                endSec = song.getHighlightEndTime();
-            } else {
-                throw new IllegalArgumentException("Invalid accuracy mode: " + mode);
-            }
+        int startSec, endSec;
+        if (mode.equalsIgnoreCase("full")) {
+            startSec = song.getFullStartTime();
+            endSec = song.getFullEndTime();
+        } else if (mode.equalsIgnoreCase("highlight")) {
+            startSec = song.getHighlightStartTime();
+            endSec = song.getHighlightEndTime();
+        } else {
+            throw new IllegalArgumentException("Invalid accuracy mode: " + mode);
+        }
 
-            LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+
+        // 0415: sessionId 생성 로직 (랜덤 or timestamp 등)
+        long sessionId = System.currentTimeMillis(); // 간단한 예: 현재 timestamp
 
         AccuracySession session = new AccuracySession();
         session.setUser(user);
@@ -217,4 +218,4 @@ public class AccuracySessionService {
 
 
 }
-    /** 사용자 연습 기록 조회 getUserAccuracyHistory (수정 : 메서드 삭제) **/
+/** 사용자 연습 기록 조회 getUserAccuracyHistory (수정 : 메서드 삭제) **/

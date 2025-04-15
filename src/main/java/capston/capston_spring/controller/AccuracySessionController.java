@@ -120,11 +120,10 @@ public class AccuracySessionController {
     /** 1절 정확도 연습 시작 - 세션 객체 리스트 반환 (0414 수정됨) **/
     @PostMapping("/full")
     public ResponseEntity<?> startFullAccuracySession(@AuthenticationPrincipal CustomUserDetails user,
-                                                      @RequestParam Long songId,
-                                                      @RequestParam Long sessionId) {
+                                                      @RequestParam Long songId) {  // 0415 sessionId 삭제
         try {
             String username = user.getUsername();
-            AccuracySession session = accuracySessionService.startAccuracySession(username, songId, "full",sessionId); // 서비스 메서드 변경됨
+            AccuracySession session = accuracySessionService.startAccuracySession(username, songId, "full"); // sessionId 제거됨
             return ResponseEntity.ok(AccuracySessionResponse.fromEntity(session));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
@@ -133,14 +132,14 @@ public class AccuracySessionController {
         }
     }
 
+
     /** 하이라이트 정확도 연습 시작 - 세션 객체 리스트 반환 (0414 수정됨) **/
     @PostMapping("/highlight")
     public ResponseEntity<?> startHighlightAccuracySession(@AuthenticationPrincipal CustomUserDetails user,
-                                                           @RequestParam  Long songId,
-                                                           @RequestParam Long sessionId) {
+                                                           @RequestParam Long songId) { // 0415 sessionId 제거
         try {
             String username = user.getUsername();
-            AccuracySession session = accuracySessionService.startAccuracySession(username, songId, "highlight",sessionId); // 서비스 메서드 변경됨
+            AccuracySession session = accuracySessionService.startAccuracySession(username, songId, "highlight"); // 0415 sessionId 제거
             return ResponseEntity.ok(AccuracySessionResponse.fromEntity(session));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
@@ -148,4 +147,5 @@ public class AccuracySessionController {
             return ResponseEntity.status(500).body(Map.of("error", "Internal Server Error"));
         }
     }
+
 }
