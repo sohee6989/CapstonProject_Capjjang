@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 import os
 import cv2
 import numpy as np
-from pose_analysis import process_and_compare_videos, analyze_frame_image  # 분석 함수
+from pose_analysis import process_and_compare_videos, analyze_frame_image, extract_expert_keypoints  # 분석 함수
 from s3_helper import download_temp_from_s3  # 실루엣 영상 다운로드용
 
 app = Flask(__name__)
@@ -29,8 +29,12 @@ def resize_with_aspect_ratio(image, target_width, target_height):
 @app.route("/frame", methods=["POST"])
 def analyze_frame():
     file = request.files.get("frame")
+    song_title = request.form.get("songTitle")
+
     if file is None:
         return jsonify({"error": "No frame provided"}), 400
+    if not song_title:
+        return jsonify({"error": "Missing songTitle"}), 400
 
     image_bytes = np.frombuffer(file.read(), np.uint8)
     image = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
@@ -39,7 +43,8 @@ def analyze_frame():
         return jsonify({"error": "Invalid image"}), 400
 
     try:
-        score, feedback = analyze_frame_image(image)
+        expert_kps = extract_expert_keypoints(song_title)
+        score, feedback = analyze_frame_image(image, expert_kps)
         return jsonify({"score": score, "feedback": feedback})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
