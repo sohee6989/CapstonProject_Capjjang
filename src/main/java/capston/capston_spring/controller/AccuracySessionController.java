@@ -5,10 +5,12 @@ import capston.capston_spring.dto.AccuracySessionResponse;
 import capston.capston_spring.dto.CustomUserDetails;
 import capston.capston_spring.entity.AccuracySession;
 import capston.capston_spring.service.AccuracySessionService;
+import capston.capston_spring.utils.FrameIndexCalculator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -52,13 +54,17 @@ public class AccuracySessionController {
     public ResponseEntity<?> analyzeAndSaveSession(
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestParam Long songId,
-            @RequestParam String videoPath,
-            @RequestParam Long sessionId
+            @RequestParam Long sessionId,
+            @RequestPart MultipartFile image
     ) {
         try {
-            String username = user.getUsername();
+            AccuracySession session = accuracySessionService.getSessionById(sessionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid session ID"));
+
+            int frameIndex = FrameIndexCalculator.calculateFrameIndex(session.getStartTime());
+
             return ResponseEntity.ok(
-                    accuracySessionService.analyzeAndSaveSessionByUsername(username, songId, videoPath,sessionId) // 수정된 서비스 메서드 호출
+                    accuracySessionService.analyzeAndStoreFrameStep(user.getUsername(), songId, sessionId, frameIndex, image) // 수정된 서비스 메서드 호출
             );
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
