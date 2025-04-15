@@ -5,12 +5,14 @@ import capston.capston_spring.dto.AccuracySessionResponse;
 import capston.capston_spring.dto.CustomUserDetails;
 import capston.capston_spring.entity.AccuracySession;
 import capston.capston_spring.service.AccuracySessionService;
+import capston.capston_spring.utils.FrameIndexCalculator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -48,17 +50,21 @@ public class AccuracySessionController {
     }
 
     /** Mediapipe 기반 점수 평가 실행 후 결과 저장 (Flask 연동) **/
-    @PostMapping("/analyze")
+    @PostMapping(value = "/analyze", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> analyzeAndSaveSession(
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestParam Long songId,
-            @RequestParam String videoPath,
-            @RequestParam Long sessionId
+            @RequestParam Long sessionId,
+            @RequestPart MultipartFile image
     ) {
         try {
-            String username = user.getUsername();
+            AccuracySession session = accuracySessionService.getSessionByCustomSessionId(sessionId)
+                    .orElseThrow(() -> new IllegalArgumentException("Invalid session ID"));
+
+            int frameIndex = FrameIndexCalculator.calculateFrameIndex(session.getStartTime());
+
             return ResponseEntity.ok(
-                    accuracySessionService.analyzeAndSaveSessionByUsername(username, songId, videoPath,sessionId) // 수정된 서비스 메서드 호출
+                    accuracySessionService.analyzeAndStoreFrameStep(user.getUsername(), songId, sessionId, frameIndex, image) // 수정된 서비스 메서드 호출
             );
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
@@ -87,7 +93,7 @@ public class AccuracySessionController {
     @GetMapping("/result")  // 변경된 부분: 경로에서 /{sessionId}/result -> /result로 변경
     public ResponseEntity<?> getSessionResult(@RequestParam Long sessionId) {  // 변경된 부분: sessionId를 쿼리 파라미터로 받기
         try {
-            return accuracySessionService.getSessionById(sessionId)
+            return accuracySessionService.getSessionByCustomSessionId(sessionId)
                     .map(session -> ResponseEntity.ok(
                             AccuracySessionResponse.fromEntity(session)
                     ))
@@ -114,15 +120,11 @@ public class AccuracySessionController {
     /** 1절 정확도 연습 시작 - 세션 객체 리스트 반환 (0414 수정됨) **/
     @PostMapping("/full")
     public ResponseEntity<?> startFullAccuracySession(@AuthenticationPrincipal CustomUserDetails user,
-                                                      @RequestParam Long songId,
-                                                      @RequestParam Long sessionId) {
+                                                      @RequestParam Long songId) {  // 0415 sessionId 삭제
         try {
             String username = user.getUsername();
-            List<AccuracySession> sessions = accuracySessionService.startFullAccuracySessionList(username, songId, sessionId); // 서비스 메서드 변경됨
-            List<AccuracySessionResponse> response = sessions.stream() // List로 응답 포맷 변경
-                    .map(AccuracySessionResponse::fromEntity)
-                    .toList();
-            return ResponseEntity.ok(response);
+            AccuracySession session = accuracySessionService.startAccuracySession(username, songId, "full"); // sessionId 제거됨
+            return ResponseEntity.ok(AccuracySessionResponse.fromEntity(session));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -130,22 +132,20 @@ public class AccuracySessionController {
         }
     }
 
+
     /** 하이라이트 정확도 연습 시작 - 세션 객체 리스트 반환 (0414 수정됨) **/
     @PostMapping("/highlight")
     public ResponseEntity<?> startHighlightAccuracySession(@AuthenticationPrincipal CustomUserDetails user,
-                                                           @RequestParam Long songId,
-                                                           @RequestParam Long sessionId) {
+                                                           @RequestParam Long songId) { // 0415 sessionId 제거
         try {
             String username = user.getUsername();
-            List<AccuracySession> sessions = accuracySessionService.startHighlightAccuracySessionList(username, songId, sessionId); // 서비스 메서드 변경됨
-            List<AccuracySessionResponse> response = sessions.stream() // List로 응답 포맷 변경
-                    .map(AccuracySessionResponse::fromEntity)
-                    .toList();
-            return ResponseEntity.ok(response);
+            AccuracySession session = accuracySessionService.startAccuracySession(username, songId, "highlight"); // 0415 sessionId 제거
+            return ResponseEntity.ok(AccuracySessionResponse.fromEntity(session));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", "Internal Server Error"));
         }
     }
+
 }
