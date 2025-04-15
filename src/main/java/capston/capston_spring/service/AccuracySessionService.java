@@ -1,30 +1,47 @@
-// mediapipe 사용의 경우 파이썬의 결과를 가져와서 데이터 저장 및 반환만 담단
-
 package capston.capston_spring.service;
 
 import capston.capston_spring.dto.AccuracySessionDto;
+import capston.capston_spring.entity.AccuracyFrameEvaluation;
 import capston.capston_spring.entity.AccuracySession;
 import capston.capston_spring.entity.AppUser;
 import capston.capston_spring.entity.Song;
 import capston.capston_spring.exception.SongNotFoundException;
 import capston.capston_spring.exception.UserNotFoundException;
+import capston.capston_spring.repository.AccuracyFrameEvaluationRepository;
 import capston.capston_spring.repository.AccuracySessionRepository;
 import capston.capston_spring.repository.SongRepository;
 import capston.capston_spring.repository.UserRepository;
+import capston.capston_spring.utils.MultipartInputStreamFileResource;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 
 @Service
 @RequiredArgsConstructor
 public class AccuracySessionService {
+    private final Logger log = LoggerFactory.getLogger(AccuracySessionService.class);
+
     private final AccuracySessionRepository accuracySessionRepository;
+    private final AccuracyFrameEvaluationRepository frameEvaluationRepository;
     private final SongRepository songRepository;
     private final UserRepository userRepository;
 
@@ -86,53 +103,49 @@ public class AccuracySessionService {
     }
 
     /** 정확도 분석 후 결과 저장 (Flask 연동 유지) **/
-    public AccuracySession analyzeAndSaveSessionByUsername(String username, Long songId, String videoPath, Long sessionId) {
-        AppUser user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException("User not found: " + username)); // 예외 처리 복원
+    public AccuracyFrameEvaluation analyzeAndStoreFrameStep(String username, Long songId, Long sessionId, Integer frameIndex, MultipartFile image) throws IOException {
+        AppUser user = getUserByUsername(username);
+        Song song = getSongById(songId);
 
-        Song song = songRepository.findById(songId)
-                .orElseThrow(() -> new SongNotFoundException("Song not found: " + songId)); // 예외 처리 복원
+        AccuracySession session = accuracySessionRepository.findBySessionId(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
 
-        // sessionId -> 특정 세션을 조회하거나 처리할 수 있음
-        Optional<AccuracySession> existingSession = accuracySessionRepository.findById(sessionId);
-        if (existingSession.isPresent()) {  // 이미 존재하는 sessionId에 대한 로직 처리
-            throw new IllegalArgumentException("Session ID already exists: " + sessionId);
-        }
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("frame", new MultipartInputStreamFileResource(image.getInputStream(), image.getOriginalFilename()));// 0415 "image" → "frame"
+        body.add("song_title", song.getTitle());
+        body.add("session_id", sessionId);
+        body.add("frame_index", frameIndex);
 
-
-        RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
 
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("user_id", user.getId());
-        requestBody.put("song_id", songId);
-        requestBody.put("video_path", videoPath);
-        requestBody.put("song_title", song.getTitle());
-        requestBody.put("session_id", sessionId);
+        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
+        RestTemplate rt = new RestTemplate();
 
-        HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
-        ResponseEntity<Map> response = restTemplate.exchange(flaskAnalyzeUrl, HttpMethod.POST, request, Map.class);
+        ResponseEntity<Map> response = rt.postForEntity(flaskAnalyzeUrl, request, Map.class);
+
+        // 📋 Flask 응답 전체 로그 출력
+        log.info("🔍 Flask 응답 상태: {}", response.getStatusCode());
+        log.info("🔍 Flask 응답 헤더: {}", response.getHeaders());
+        log.info("🔍 Flask 응답 본문: {}", response.getBody());
 
         if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-            throw new RuntimeException("Failed to analyze video accuracy.");
+            throw new RuntimeException("Flask 분석 실패");
         }
 
         double accuracyScore = ((Number) response.getBody().get("accuracy_score")).doubleValue();
         String feedback = (String) response.getBody().get("feedback");
         String accuracyDetails = (String) response.getBody().get("accuracy_details");
+        String label = (String) response.getBody().get("label");
 
-        AccuracySession session = new AccuracySession();
-        session.setUser(user);
-        session.setSong(song);
-        session.setStartTime(LocalDateTime.now());
-        session.setEndTime(LocalDateTime.now().plusMinutes(1));
-        session.setScore(accuracyScore);
-        session.setFeedback(feedback);
-        session.setAccuracyDetails(accuracyDetails);
-        session.setMode("full");
+        AccuracyFrameEvaluation frame = new AccuracyFrameEvaluation();
+        frame.setSession(session);
+        frame.setFrameIndex(frameIndex);
+        frame.setScore(accuracyScore);
+        frame.setLabel(label);
+        frame.setAccuracyDetails(accuracyDetails);
 
-        return accuracySessionRepository.save(session);
+        return frameEvaluationRepository.save(frame);
     }
 
 
@@ -146,21 +159,25 @@ public class AccuracySessionService {
         return paths;
     }
 
-    /** 정확도 세션 시작 - full 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
-    public List<AccuracySession> startFullAccuracySessionList(String username, Long songId, Long sessionId) {
-        AccuracySession session = startAccuracySessionByUsername(username, songId, "full", sessionId);
-        return List.of(session);
-    }
-
-    /** 정확도 세션 시작 - highlight 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
-    public List<AccuracySession> startHighlightAccuracySessionList(String username, Long songId, Long sessionId) {
-        AccuracySession session = startAccuracySessionByUsername(username, songId, "highlight", sessionId);
-        return List.of(session);
-    }
+//    /** 정확도 세션 시작 - full 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
+//    public List<AccuracySession> startFullAccuracySessionAndAnalyze(String username, Long songId, Long sessionId, MultipartFile image) throws IOException {
+//        AccuracySession session = startAccuracySessionByUsername(username, songId, "full", sessionId);
+//        int frameIndex = FrameIndexCalculator.calculateFrameIndex(session.getStartTime());
+//        analyzeAndStoreFrameStep(username, songId, sessionId, frameIndex, image);
+//        return List.of(session);
+//    }
+//
+//    /** 정확도 세션 시작 - highlight 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
+//    public List<AccuracySession> startHighlightAccuracySessionAndAnalyze(String username, Long songId, Long sessionId, MultipartFile image) throws IOException {
+//        AccuracySession session = startAccuracySessionByUsername(username, songId, "highlight", sessionId);
+//        int frameIndex = FrameIndexCalculator.calculateFrameIndex(session.getStartTime());
+//        analyzeAndStoreFrameStep(username, songId, sessionId, frameIndex, image);
+//        return List.of(session);
+//    }
 
     //0403 수정: 챌린지 세션 시간은 하이라이트 그대로 받아오기
     /** 정확도 세션 시작 - mode (full/highlight) 에 따라 자동 시간 설정 후 저장 **/
-    public AccuracySession startAccuracySessionByUsername(String username, Long songId, String mode, Long sessionId) {
+    public AccuracySession startAccuracySession(String username, Long songId, String mode) {
         AppUser user = getUserByUsername(username);
         Song song = getSongById(songId);
 
@@ -175,12 +192,17 @@ public class AccuracySessionService {
             throw new IllegalArgumentException("Invalid accuracy mode: " + mode);
         }
 
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+
+        // 0415: sessionId 생성 로직 (랜덤 or timestamp 등)
+        long sessionId = System.currentTimeMillis(); // 간단한 예: 현재 timestamp
+
         AccuracySession session = new AccuracySession();
         session.setUser(user);
         session.setSong(song);
         session.setMode(mode);
-        session.setStartTime(LocalDateTime.ofEpochSecond(startSec, 0, java.time.ZoneOffset.UTC));
-        session.setEndTime(LocalDateTime.ofEpochSecond(endSec, 0, java.time.ZoneOffset.UTC));
+        session.setStartTime(now);
+        session.setEndTime(now.plusSeconds(endSec - startSec));
         session.setScore(0.0); // 초기 점수
         session.setFeedback(null); // 초기 피드백 없음
         session.setAccuracyDetails(null); // 초기 상세 없음
@@ -189,5 +211,11 @@ public class AccuracySessionService {
         return accuracySessionRepository.save(session);
     }
 
+    /** 커스텀 sessionId 기준으로 세션 조회 */
+    public Optional<AccuracySession> getSessionByCustomSessionId(Long sessionId) {
+        return accuracySessionRepository.findBySessionId(sessionId);
+    }
+
+
 }
-    /** 사용자 연습 기록 조회 getUserAccuracyHistory (수정 : 메서드 삭제) **/
+/** 사용자 연습 기록 조회 getUserAccuracyHistory (수정 : 메서드 삭제) **/
