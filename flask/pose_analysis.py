@@ -29,11 +29,33 @@ def resize_with_aspect_ratio(image, target_width, target_height):
     padded = cv2.copyMakeBorder(resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=[0, 0, 0])
     return padded
 
+# 전문가 포즈 1프레임에서 키포인트 추출
+def extract_expert_keypoints(song_title):
+    expert_video_path = f"videos1/{song_title}_expert.mp4"
+    cap = cv2.VideoCapture(expert_video_path)
 
-# ✅ 실시간 프레임 1장 분석용 함수 (Flask /frame API에서 사용)
-def analyze_frame_image(frame_user):
-    # 전문가 기준 포즈를 임시로 고정 → 실제 비교 포즈 저장/불러오기로 대체 가능
-    dummy_expert_keypoints = np.random.rand(33, 3)
+    if not cap.isOpened():
+        raise ValueError("전문가 영상을 열 수 없습니다.")
+
+    ret, frame = cap.read()
+    cap.release()
+
+    if not ret:
+        raise ValueError("전문가 영상에서 프레임을 읽을 수 없습니다.")
+
+    frame_resized = resize_with_aspect_ratio(frame, 640, 480)
+    frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+
+    with mp_pose.Pose(static_image_mode=True) as pose:
+        result = pose.process(frame_rgb)
+        if result.pose_landmarks:
+            return np.array([[lmk.x, lmk.y, lmk.z] for lmk in result.pose_landmarks.landmark])
+        else:
+            raise ValueError("전문가 영상에서 포즈를 감지할 수 없습니다.")
+            
+# 실시간 프레임 1장 분석용 함수 (Flask /frame API에서 사용)
+def analyze_frame_image(frame_user, song_title):
+    expert_keypoints = extract_expert_keypoints(song_title)
 
     with mp_pose.Pose(static_image_mode=True) as pose:
         frame_rgb = cv2.cvtColor(frame_user, cv2.COLOR_BGR2RGB)
@@ -42,7 +64,7 @@ def analyze_frame_image(frame_user):
         if result_amateur.pose_landmarks:
             amateur_keypoints = np.array([[lmk.x, lmk.y, lmk.z] for lmk in result_amateur.pose_landmarks.landmark])
             amateur_keypoints_flat = amateur_keypoints.flatten()
-            expert_keypoints_flat = dummy_expert_keypoints.flatten()
+            expert_keypoints_flat = expert_keypoints.flatten()
 
             distance, _ = fastdtw(
                 expert_keypoints_flat[:, np.newaxis],
@@ -50,9 +72,9 @@ def analyze_frame_image(frame_user):
                 dist=euclidean
             )
 
-            max_distance = 5.0
+            max_distance = 50.0
             score = max(100 - (distance / max_distance) * 100, 0)
-
+            
             if score >= 90:
                 feedback = "Perfect"
             elif score >= 80:
