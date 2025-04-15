@@ -21,7 +21,12 @@ def get_ref_pose_from_s3(song_title: str, frame_index: int):
         s3 = boto3.client("s3")
         bucket = os.environ.get("S3_BUCKET_NAME")
         key = f"songs/{song_title}/{song_title}_ref_pose_filtered_1sec_normalized.json"
-        obj = s3.get_object(Bucket=bucket, Key=key)
+        try:
+            obj = s3.get_object(Bucket=bucket, Key=key)
+        except Exception as e:
+            app.logger.error(f"S3에서 오브젝트 불러오기 실패: {e}")
+            return jsonify({"error": f"S3 error: {str(e)}"}), 500
+
         pose_cache[song_title] = json.loads(obj['Body'].read().decode('utf-8'))
 
     ref_data = pose_cache[song_title]
@@ -51,7 +56,7 @@ def pose_eval():
         ref_pose = get_ref_pose_from_s3(song_title, frame_index)
 
         if not ref_pose:
-            app.logger.warning(f"❌ No reference pose for frame {frame_index}")
+            app.logger.warning(f"No reference pose for frame {frame_index}")
             return jsonify({"error": f"No reference pose for frame {frame_index}"}), 404
 
         score = compare_pose_directional(user_pose, ref_pose)

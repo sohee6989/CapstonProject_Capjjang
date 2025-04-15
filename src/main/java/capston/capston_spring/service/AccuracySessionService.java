@@ -107,6 +107,8 @@ public class AccuracySessionService {
         AppUser user = getUserByUsername(username);
         Song song = getSongById(songId);
 
+        log.info("Flask Analyze URL: {}", flaskAnalyzeUrl);
+
         AccuracySession session = accuracySessionRepository.findBySessionId(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
 
