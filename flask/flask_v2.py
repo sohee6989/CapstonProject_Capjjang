@@ -1,10 +1,9 @@
-# flask_v2.py
-
 from flask import Flask, request, jsonify
 import os
 import cv2
-from pose_analysis import process_and_compare_videos  # 실시간 정확도 분석 함수 불러오기
-from s3_helper import download_temp_from_s3
+import numpy as np
+from pose_analysis import process_and_compare_videos, analyze_frame_image  # 분석 함수
+from s3_helper import download_temp_from_s3  # 실루엣 영상 다운로드용
 
 app = Flask(__name__)
 
@@ -24,6 +23,26 @@ def resize_with_aspect_ratio(image, target_width, target_height):
     padded = cv2.copyMakeBorder(resized, top, bottom, left, right,
                                  cv2.BORDER_CONSTANT, value=[0, 0, 0])
     return padded
+
+
+# 실시간 프레임 분석 API
+@app.route("/frame", methods=["POST"])
+def analyze_frame():
+    file = request.files.get("frame")
+    if file is None:
+        return jsonify({"error": "No frame provided"}), 400
+
+    image_bytes = np.frombuffer(file.read(), np.uint8)
+    image = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR)
+
+    if image is None:
+        return jsonify({"error": "Invalid image"}), 400
+
+    try:
+        score, feedback = analyze_frame_image(image)
+        return jsonify({"score": score, "feedback": feedback})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # 연습 모드: 실루엣만 오버레이
@@ -81,13 +100,13 @@ def accuracy_mode():
     if not song_title:
         return jsonify({"error": "songTitle 파라미터가 필요합니다."}), 400
 
-    # 영상 재생과 동시에 점수 분석 시작
     try:
         process_and_compare_videos(song_title=song_title)
         return jsonify({"message": "Accuracy mode 종료"})
     except Exception as e:
         print("오류 발생:", str(e))
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
