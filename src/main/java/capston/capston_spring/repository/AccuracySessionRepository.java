@@ -14,4 +14,6 @@ public interface AccuracySessionRepository extends JpaRepository<AccuracySession
 
     Optional<AccuracySession> findBySessionId(Long sessionId);
 
+
+
 }

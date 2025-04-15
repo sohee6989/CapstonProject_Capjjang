@@ -13,6 +13,8 @@ import capston.capston_spring.repository.SongRepository;
 import capston.capston_spring.repository.UserRepository;
 import capston.capston_spring.utils.MultipartInputStreamFileResource;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -36,6 +38,8 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class AccuracySessionService {
+    private final Logger log = LoggerFactory.getLogger(AccuracySessionService.class);
+
     private final AccuracySessionRepository accuracySessionRepository;
     private final AccuracyFrameEvaluationRepository frameEvaluationRepository;
     private final SongRepository songRepository;
@@ -120,6 +124,11 @@ public class AccuracySessionService {
 
         ResponseEntity<Map> response = rt.postForEntity(flaskAnalyzeUrl, request, Map.class);
 
+        // 📋 Flask 응답 전체 로그 출력
+        log.info("🔍 Flask 응답 상태: {}", response.getStatusCode());
+        log.info("🔍 Flask 응답 헤더: {}", response.getHeaders());
+        log.info("🔍 Flask 응답 본문: {}", response.getBody());
+
         if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
             throw new RuntimeException("Flask 분석 실패");
         }
@@ -150,36 +159,40 @@ public class AccuracySessionService {
         return paths;
     }
 
-    /** 정확도 세션 시작 - full 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
-    public List<AccuracySession> startFullAccuracySessionList(String username, Long songId, Long sessionId) {
-        AccuracySession session = startAccuracySessionByUsername(username, songId, "full", sessionId);
-        return List.of(session);
-    }
-
-    /** 정확도 세션 시작 - highlight 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
-    public List<AccuracySession> startHighlightAccuracySessionList(String username, Long songId, Long sessionId) {
-        AccuracySession session = startAccuracySessionByUsername(username, songId, "highlight", sessionId);
-        return List.of(session);
-    }
+//    /** 정확도 세션 시작 - full 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
+//    public List<AccuracySession> startFullAccuracySessionAndAnalyze(String username, Long songId, Long sessionId, MultipartFile image) throws IOException {
+//        AccuracySession session = startAccuracySessionByUsername(username, songId, "full", sessionId);
+//        int frameIndex = FrameIndexCalculator.calculateFrameIndex(session.getStartTime());
+//        analyzeAndStoreFrameStep(username, songId, sessionId, frameIndex, image);
+//        return List.of(session);
+//    }
+//
+//    /** 정확도 세션 시작 - highlight 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
+//    public List<AccuracySession> startHighlightAccuracySessionAndAnalyze(String username, Long songId, Long sessionId, MultipartFile image) throws IOException {
+//        AccuracySession session = startAccuracySessionByUsername(username, songId, "highlight", sessionId);
+//        int frameIndex = FrameIndexCalculator.calculateFrameIndex(session.getStartTime());
+//        analyzeAndStoreFrameStep(username, songId, sessionId, frameIndex, image);
+//        return List.of(session);
+//    }
 
     //0403 수정: 챌린지 세션 시간은 하이라이트 그대로 받아오기
     /** 정확도 세션 시작 - mode (full/highlight) 에 따라 자동 시간 설정 후 저장 **/
-    public AccuracySession startAccuracySessionByUsername(String username, Long songId, String mode, Long sessionId) {
-        AppUser user = getUserByUsername(username);
-        Song song = getSongById(songId);
+    public AccuracySession startAccuracySession(String username, Long songId, String mode, Long sessionId) {
+            AppUser user = getUserByUsername(username);
+            Song song = getSongById(songId);
 
-        int startSec, endSec;
-        if (mode.equalsIgnoreCase("full")) {
-            startSec = song.getFullStartTime();
-            endSec = song.getFullEndTime();
-        } else if (mode.equalsIgnoreCase("highlight")) {
-            startSec = song.getHighlightStartTime();
-            endSec = song.getHighlightEndTime();
-        } else {
-            throw new IllegalArgumentException("Invalid accuracy mode: " + mode);
-        }
+            int startSec, endSec;
+            if (mode.equalsIgnoreCase("full")) {
+                startSec = song.getFullStartTime();
+                endSec = song.getFullEndTime();
+            } else if (mode.equalsIgnoreCase("highlight")) {
+                startSec = song.getHighlightStartTime();
+                endSec = song.getHighlightEndTime();
+            } else {
+                throw new IllegalArgumentException("Invalid accuracy mode: " + mode);
+            }
 
-        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+            LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
         AccuracySession session = new AccuracySession();
         session.setUser(user);
@@ -194,6 +207,12 @@ public class AccuracySessionService {
 
         return accuracySessionRepository.save(session);
     }
+
+    /** 커스텀 sessionId 기준으로 세션 조회 */
+    public Optional<AccuracySession> getSessionByCustomSessionId(Long sessionId) {
+        return accuracySessionRepository.findBySessionId(sessionId);
+    }
+
 
 }
     /** 사용자 연습 기록 조회 getUserAccuracyHistory (수정 : 메서드 삭제) **/

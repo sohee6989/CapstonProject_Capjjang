@@ -48,6 +48,7 @@ public class AccuracySession {
     private String mode;
 
     // 세션 ID 추가
+    @Setter
     @Column(nullable = false)
     private Long sessionId;  // sessionId 필드 추가
 
@@ -86,6 +87,7 @@ public class AccuracySession {
         Duration duration = Duration.between(this.startTime, this.endTime);
         return String.format("00:00:%02d", duration.toSeconds());
     }
+
 
     /** 추가된 부분: mode 포함 생성자 (id, createdAt 제외) **/
     public AccuracySession(AppUser user, Song song, LocalDateTime startTime, LocalDateTime endTime,
