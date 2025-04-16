@@ -72,7 +72,7 @@ def pose_eval():
         app.logger.error(f"Pose comparison failed: {e}")
         return jsonify({"error": "Pose comparison failed"}), 500
 
-    feedback = 'BEST' if score > 95 else 'GOOD' if score > 85 else 'BAD'
+    feedback = 'BEST' if score > 95 else 'GOOD' if score > 87 else 'BAD'
 
     return jsonify({
         "score": score,
