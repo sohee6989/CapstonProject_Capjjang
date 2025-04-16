@@ -1,14 +1,10 @@
 package capston.capston_spring.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import jakarta.persistence.Id;
 
 @Entity
 @Getter
@@ -24,5 +20,10 @@ public class AccuracyFrameEvaluation {
     private AccuracySession session;
 
     private Integer frameIndex;
+
     private Double score;
+
+    @Column(length = 500)  // 피드백 내용 ?: 피드백 길이 제한
+    private String feedback;
+
 }

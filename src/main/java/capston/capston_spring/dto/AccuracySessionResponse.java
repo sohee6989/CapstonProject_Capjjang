@@ -17,13 +17,11 @@ public class AccuracySessionResponse {
     private UserInfo user;
     private SongInfo song;
     private Double score;
-    private String feedback;
-    // private String accuracyDetails;         // 동작별 정확도 데이터 포함
     private String mode; // 추가된 부분: mode
     private LocalDateTime startTime;
     private LocalDateTime endTime;
-    private LocalDateTime timestamp;
     private String duration;
+    private LocalDateTime timestamp;
 
     @Getter
     @AllArgsConstructor
@@ -55,17 +53,15 @@ public class AccuracySessionResponse {
         String formattedDuration = String.format("00:00:%02d", duration.toSeconds());
 
         return new AccuracySessionResponse(
-                session.getSessionId(), // 0416 수정: getId() → getSessionId()
+                session.getId(), // 0416 수정: getSessionId() → getId()
                 UserInfo.from(session.getUser()),
                 SongInfo.from(song),
-                session.getScore(),
-                session.getFeedback(),
-                // session.getAccuracyDetails(),
-                mode,
+                session.getAvg_score(),
+                session.getMode(),
                 session.getStartTime(),
                 session.getEndTime(),
-                session.getCreatedAt(),
-                formattedDuration
+                formattedDuration,
+                session.getCreatedAt()
         );
     }
 }

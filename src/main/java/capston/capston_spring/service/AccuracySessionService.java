@@ -1,12 +1,11 @@
 package capston.capston_spring.service;
 
-import capston.capston_spring.dto.AccuracySessionDto;
 import capston.capston_spring.entity.AccuracyFrameEvaluation;
 import capston.capston_spring.entity.AccuracySession;
 import capston.capston_spring.entity.AppUser;
 import capston.capston_spring.entity.Song;
+import capston.capston_spring.exception.SessionNotFoundException;
 import capston.capston_spring.exception.SongNotFoundException;
-import capston.capston_spring.exception.UserNotFoundException;
 import capston.capston_spring.repository.AccuracyFrameEvaluationRepository;
 import capston.capston_spring.repository.AccuracySessionRepository;
 import capston.capston_spring.repository.SongRepository;
@@ -54,12 +53,6 @@ public class AccuracySessionService {
                 .orElseThrow(() -> new SongNotFoundException("Song not found: " + songId));
     }
 
-    public List<AccuracySession> getByUserId(Long userId) {
-        AppUser user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found: " + userId));
-        return accuracySessionRepository.findByUserId(user.getId());
-    }
-
     /** username 기반 사용자 조회 (기존 + 유지) **/
     private AppUser getUserByUsername(String username) {
         return userRepository.findByUsername(username)
@@ -84,22 +77,27 @@ public class AccuracySessionService {
         return accuracySessionRepository.findById(sessionId);
     }
 
-    /** AccuracySessionDto 기반 세션 저장 **/
-    public AccuracySession saveSessionFromDto(String username, AccuracySessionDto dto) {
-        AppUser user = getUserByUsername(username);
-        Song song = getSongById(dto.getSongId());
+    /** 사용자가 플레이한 게임에 대한 결과(session info) 저장 **/
+    public Object saveSession(Long sessionId) {
+        AccuracySession session = accuracySessionRepository.findById(sessionId)
+                .orElseThrow(() -> new SessionNotFoundException("해당 세션이 존재하지 않습니다."));
 
-        AccuracySession session = new AccuracySession();
-        session.setUser(user);
-        session.setSong(song);
-        session.setScore(dto.getScore());
-        session.setFeedback(dto.getFeedback());
-        // session.setAccuracyDetails(dto.getAccuracyDetails());
-        session.setMode(dto.getMode());
-        session.setStartTime(dto.getStartTime());
-        session.setEndTime(dto.getEndTime());
 
-        return accuracySessionRepository.save(session);
+        // 1. 해당 세션의 모든 프레임 평가 가져오기
+        List<AccuracyFrameEvaluation> evaluations = frameEvaluationRepository.findBySession(session);
+
+        // 2. 평균 점수 계산
+        double avg = evaluations.stream()
+                .mapToDouble(AccuracyFrameEvaluation::getScore)
+                .average()
+                .orElse(0.0);  // 점수가 없을 경우 0.0
+
+        session.setEndTime(LocalDateTime.now());
+        session.setAvg_score(avg);
+
+        accuracySessionRepository.save(session);
+
+        return ResponseEntity.ok().build();
     }
 
     /** 정확도 분석 후 결과 저장 (Flask 연동 유지) **/
@@ -107,7 +105,7 @@ public class AccuracySessionService {
         AppUser user = getUserByUsername(username);
         Song song = getSongById(songId);
 
-        AccuracySession session = accuracySessionRepository.findBySessionId(sessionId)
+        AccuracySession session = accuracySessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Session not found: " + sessionId));
 
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -135,15 +133,12 @@ public class AccuracySessionService {
 
         double accuracyScore = ((Number) response.getBody().get("score")).doubleValue();   // accuracy_score -> score
         String feedback = (String) response.getBody().get("feedback");
-        // String accuracyDetails = (String) response.getBody().get("accuracy_details");
-        // String label = (String) response.getBody().get("label");
 
         AccuracyFrameEvaluation frame = new AccuracyFrameEvaluation();
         frame.setSession(session);
         frame.setFrameIndex(frameIndex);
         frame.setScore(accuracyScore);
-        // frame.setLabel(label);
-        // frame.setAccuracyDetails(accuracyDetails);
+        frame.setFeedback(feedback);
 
         return frameEvaluationRepository.save(frame);
     }
@@ -159,25 +154,10 @@ public class AccuracySessionService {
         return paths;
     }
 
-//    /** 정확도 세션 시작 - full 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
-//    public List<AccuracySession> startFullAccuracySessionAndAnalyze(String username, Long songId, Long sessionId, MultipartFile image) throws IOException {
-//        AccuracySession session = startAccuracySessionByUsername(username, songId, "full", sessionId);
-//        int frameIndex = FrameIndexCalculator.calculateFrameIndex(session.getStartTime());
-//        analyzeAndStoreFrameStep(username, songId, sessionId, frameIndex, image);
-//        return List.of(session);
-//    }
-//
-//    /** 정확도 세션 시작 - highlight 모드 (리스트 형태로 반환하도록 래퍼 메서드 추가됨) 0414 **/
-//    public List<AccuracySession> startHighlightAccuracySessionAndAnalyze(String username, Long songId, Long sessionId, MultipartFile image) throws IOException {
-//        AccuracySession session = startAccuracySessionByUsername(username, songId, "highlight", sessionId);
-//        int frameIndex = FrameIndexCalculator.calculateFrameIndex(session.getStartTime());
-//        analyzeAndStoreFrameStep(username, songId, sessionId, frameIndex, image);
-//        return List.of(session);
-//    }
 
     //0403 수정: 챌린지 세션 시간은 하이라이트 그대로 받아오기
     /** 정확도 세션 시작 - mode (full/highlight) 에 따라 자동 시간 설정 후 저장 **/
-    public AccuracySession startAccuracySession(String username, Long songId, String mode) {
+    public AccuracySession createAccuracySession(String username, Long songId, String mode) {
         AppUser user = getUserByUsername(username);
         Song song = getSongById(songId);
 
@@ -194,28 +174,16 @@ public class AccuracySessionService {
 
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
-        // 0415: sessionId 생성 로직 (랜덤 or timestamp 등)
-        long sessionId = System.currentTimeMillis(); // 간단한 예: 현재 timestamp
-
         AccuracySession session = new AccuracySession();
         session.setUser(user);
         session.setSong(song);
         session.setMode(mode);
         session.setStartTime(now);
         session.setEndTime(now.plusSeconds(endSec - startSec));
-        session.setScore(0.0); // 초기 점수
-        session.setFeedback(null); // 초기 피드백 없음
-        // session.setAccuracyDetails(null); // 초기 상세 없음
-        session.setSessionId(sessionId); // sessionId 설정
+        session.setAvg_score(0.0); // 초기 점수
 
         return accuracySessionRepository.save(session);
     }
 
-    /** 커스텀 sessionId 기준으로 세션 조회 */
-    public Optional<AccuracySession> getSessionByCustomSessionId(Long sessionId) {
-        return accuracySessionRepository.findBySessionId(sessionId);
-    }
-
 
 }
-/** 사용자 연습 기록 조회 getUserAccuracyHistory (수정 : 메서드 삭제) **/
