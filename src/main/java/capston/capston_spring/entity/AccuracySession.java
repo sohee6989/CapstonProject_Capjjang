@@ -40,14 +40,15 @@ public class AccuracySession {
     @Column(length = 500)  // 피드백 내용 ?: 피드백 길이 제한
     private String feedback;
 
-    @Column(length = 2000)  // 추가: 동작별 정확도 데이터 저장 (JSON 형태 가능)
-    private String accuracyDetails;
+//    @Column(length = 2000)  // 추가: 동작별 정확도 데이터 저장 (JSON 형태 가능)
+//    private String accuracyDetails;
 
     /** 모드 (예: full, highlight) 추가 **/
     @Column(nullable = false)
     private String mode;
 
     // 세션 ID 추가
+    @Setter
     @Column(nullable = false)
     private Long sessionId;  // sessionId 필드 추가
 
@@ -87,6 +88,7 @@ public class AccuracySession {
         return String.format("00:00:%02d", duration.toSeconds());
     }
 
+
     /** 추가된 부분: mode 포함 생성자 (id, createdAt 제외) **/
     public AccuracySession(AppUser user, Song song, LocalDateTime startTime, LocalDateTime endTime,
                            Double score, String feedback, String accuracyDetails, String mode, Long sessionId) {
@@ -96,7 +98,7 @@ public class AccuracySession {
         this.endTime = endTime;
         this.score = score;
         this.feedback = feedback;
-        this.accuracyDetails = accuracyDetails;
+        // this.accuracyDetails = accuracyDetails;
         this.mode = mode;
         this.sessionId = sessionId;
         this.createdAt = LocalDateTime.now(); // 자동으로 생성 시간 설정
