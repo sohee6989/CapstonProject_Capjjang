@@ -11,7 +11,7 @@ def extract_pose_keypoints(frame):
         results = pose.process(image_rgb)
 
         if not results.pose_landmarks:
-            raise ValueError("Pose not detected")
+            return None  # 예외 대신 None 반환
 
         landmarks = results.pose_landmarks.landmark
         indices = {
@@ -44,6 +44,9 @@ def part_diff(user, ref, keys):
 
 # 전체 방향 기반 점수 계산
 def compare_pose_directional(user, ref):
+    if user is None or ref is None:
+        return 0.0
+
     def angle(pose):
         dx = pose['mid_hip']['x'] - pose['left_shoulder']['x']
         dy = pose['mid_hip']['y'] - pose['left_shoulder']['y']
@@ -51,10 +54,10 @@ def compare_pose_directional(user, ref):
 
     user_angle = angle(user)
     ref_angle = angle(ref)
-    diff_angle = abs(user_angle - ref_angle)
+    diff_angle = ((user_angle - ref_angle + 180) % 360) - 180
 
     breakdown = {
-        'body_direction': max(0, 100 - diff_angle),
+        'body_direction': max(0, 100 - abs(diff_angle)),
         'left_arm': max(0, 100 - part_diff(user, ref, ["left_shoulder", "left_elbow", "left_wrist"])),
         'right_arm': max(0, 100 - part_diff(user, ref, ["right_shoulder", "right_elbow", "right_wrist"])),
         'left_leg': max(0, 100 - part_diff(user, ref, ["left_hip", "left_knee", "left_ankle"])),

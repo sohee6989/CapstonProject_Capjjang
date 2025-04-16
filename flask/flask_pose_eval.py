@@ -1,10 +1,7 @@
 from flask import Flask, request, jsonify
 import cv2
 import numpy as np
-import math
 import json
-import boto3
-import os
 from pose import extract_pose_keypoints, compare_pose_directional
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -18,8 +15,15 @@ pose_cache = {}
 def get_ref_pose_from_disk(song_title: str, frame_index: int):
     if song_title not in pose_cache:
         file_path = f"./ref_poses/{song_title}_ref_pose_filtered_1sec_normalized.json"
-        with open(file_path, "r") as f:
-            pose_cache[song_title] = json.load(f)
+        try:
+            with open(file_path, "r") as f:
+                pose_cache[song_title] = json.load(f)
+        except FileNotFoundError:
+            app.logger.error(f"Reference pose file not found for {song_title}")
+            return None
+        except json.JSONDecodeError:
+            app.logger.error(f"Error decoding JSON from {file_path}")
+            return None
 
     ref_data = pose_cache[song_title]
     ref_pose_by_frame = {entry['frame']: entry['keypoints'] for entry in ref_data}
@@ -45,6 +49,13 @@ def pose_eval():
 
     # 사용자 프레임 → 키포인트 추출
     user_kps = extract_pose_keypoints(frame)
+    if user_kps is None:
+        app.logger.warning("User pose not detected in the frame")
+        return jsonify({
+        "score": 0,
+        "feedback": "WORST",
+        "frame_index": frame_index
+        })
 
     # 전문가 키포인트 불러오기
     expert_kps = get_ref_pose_from_disk(song_title, frame_index)
@@ -55,8 +66,13 @@ def pose_eval():
         return jsonify({"error": f"No reference pose for frame {frame_index}"}), 400
 
     # 사용자와 전문가 키포인트 비교
-    score = compare_pose_directional(user_kps, expert_kps)
-    feedback = 'Best' if score > 90 else 'Good' if score > 80 else 'Bad'
+    try:
+        score = compare_pose_directional(user_kps, expert_kps)
+    except Exception as e:
+        app.logger.error(f"Pose comparison failed: {e}")
+        return jsonify({"error": "Pose comparison failed"}), 500
+
+    feedback = 'BEST' if score > 95 else 'GOOD' if score > 85 else 'BAD'
 
     return jsonify({
         "score": score,
