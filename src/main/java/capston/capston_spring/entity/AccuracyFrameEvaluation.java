@@ -25,6 +25,4 @@ public class AccuracyFrameEvaluation {
 
     private Integer frameIndex;
     private Double score;
-    private String label;
-    private String accuracyDetails;
 }

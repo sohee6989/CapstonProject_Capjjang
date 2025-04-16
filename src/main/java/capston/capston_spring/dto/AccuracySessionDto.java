@@ -11,7 +11,8 @@ public class AccuracySessionDto {
     private Long songId;
     private Double score;
     private String feedback;
-    private String accuracyDetails;
+    // private String accuracyDetails;
+    // private String label;
     private String mode;
     private LocalDateTime startTime;
     private LocalDateTime endTime;

@@ -40,8 +40,8 @@ public class AccuracySession {
     @Column(length = 500)  // 피드백 내용 ?: 피드백 길이 제한
     private String feedback;
 
-    @Column(length = 2000)  // 추가: 동작별 정확도 데이터 저장 (JSON 형태 가능)
-    private String accuracyDetails;
+//    @Column(length = 2000)  // 추가: 동작별 정확도 데이터 저장 (JSON 형태 가능)
+//    private String accuracyDetails;
 
     /** 모드 (예: full, highlight) 추가 **/
     @Column(nullable = false)
@@ -98,7 +98,7 @@ public class AccuracySession {
         this.endTime = endTime;
         this.score = score;
         this.feedback = feedback;
-        this.accuracyDetails = accuracyDetails;
+        // this.accuracyDetails = accuracyDetails;
         this.mode = mode;
         this.sessionId = sessionId;
         this.createdAt = LocalDateTime.now(); // 자동으로 생성 시간 설정
