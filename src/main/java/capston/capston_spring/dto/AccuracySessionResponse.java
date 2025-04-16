@@ -55,7 +55,7 @@ public class AccuracySessionResponse {
         String formattedDuration = String.format("00:00:%02d", duration.toSeconds());
 
         return new AccuracySessionResponse(
-                session.getId(),
+                session.getSessionId(), // 0416 수정: getId() → getSessionId()
                 UserInfo.from(session.getUser()),
                 SongInfo.from(song),
                 session.getScore(),
