@@ -94,7 +94,7 @@ public class AccuracySessionService {
         session.setSong(song);
         session.setScore(dto.getScore());
         session.setFeedback(dto.getFeedback());
-        session.setAccuracyDetails(dto.getAccuracyDetails());
+        // session.setAccuracyDetails(dto.getAccuracyDetails());
         session.setMode(dto.getMode());
         session.setStartTime(dto.getStartTime());
         session.setEndTime(dto.getEndTime());
@@ -133,17 +133,17 @@ public class AccuracySessionService {
             throw new RuntimeException("Flask 분석 실패");
         }
 
-        double accuracyScore = ((Number) response.getBody().get("accuracy_score")).doubleValue();
+        double accuracyScore = ((Number) response.getBody().get("score")).doubleValue();   // accuracy_score -> score
         String feedback = (String) response.getBody().get("feedback");
-        String accuracyDetails = (String) response.getBody().get("accuracy_details");
-        String label = (String) response.getBody().get("label");
+        // String accuracyDetails = (String) response.getBody().get("accuracy_details");
+        // String label = (String) response.getBody().get("label");
 
         AccuracyFrameEvaluation frame = new AccuracyFrameEvaluation();
         frame.setSession(session);
         frame.setFrameIndex(frameIndex);
         frame.setScore(accuracyScore);
-        frame.setLabel(label);
-        frame.setAccuracyDetails(accuracyDetails);
+        // frame.setLabel(label);
+        // frame.setAccuracyDetails(accuracyDetails);
 
         return frameEvaluationRepository.save(frame);
     }
@@ -205,7 +205,7 @@ public class AccuracySessionService {
         session.setEndTime(now.plusSeconds(endSec - startSec));
         session.setScore(0.0); // 초기 점수
         session.setFeedback(null); // 초기 피드백 없음
-        session.setAccuracyDetails(null); // 초기 상세 없음
+        // session.setAccuracyDetails(null); // 초기 상세 없음
         session.setSessionId(sessionId); // sessionId 설정
 
         return accuracySessionRepository.save(session);
