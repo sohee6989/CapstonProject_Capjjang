@@ -135,7 +135,7 @@ public class AccuracySessionService {
         String feedback = (String) response.getBody().get("feedback");
 
         AccuracyFrameEvaluation frame = new AccuracyFrameEvaluation();
-        frame.setSession(session);
+        frame.setSession_id(session);
         frame.setFrameIndex(frameIndex);
         frame.setScore(accuracyScore);
         frame.setFeedback(feedback);
