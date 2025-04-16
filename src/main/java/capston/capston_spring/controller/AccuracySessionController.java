@@ -3,6 +3,7 @@ package capston.capston_spring.controller;
 import capston.capston_spring.dto.AccuracySessionResponse;
 import capston.capston_spring.dto.CustomUserDetails;
 import capston.capston_spring.entity.AccuracySession;
+import capston.capston_spring.repository.SongRepository;
 import capston.capston_spring.service.AccuracySessionService;
 import capston.capston_spring.utils.FrameIndexCalculator;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class AccuracySessionController {
 
     private final AccuracySessionService accuracySessionService;
+    private final SongRepository songRepository;
 
     /** 인증된 사용자 정확도 세션 전체 조회 **/
     @GetMapping("/user/me")
@@ -124,7 +126,8 @@ public class AccuracySessionController {
             AccuracySession session = accuracySessionService.createAccuracySession(username, songId, "full"); // sessionId 제거됨
             return ResponseEntity.ok(Map.of(
                     "message", "full version session created",
-                    "sessionId", session.getId()
+                    "sessionId", session.getId(),
+                    "song_title", songRepository.findById(songId)
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
@@ -143,7 +146,8 @@ public class AccuracySessionController {
             AccuracySession session = accuracySessionService.createAccuracySession(username, songId, "highlight"); // 0415 sessionId 제거
             return ResponseEntity.ok(Map.of(
                     "message", "highlight version session created",
-                    "sessionId", session.getId()
+                    "sessionId", session.getId(),
+                    "song_title", songRepository.findById(songId)
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
