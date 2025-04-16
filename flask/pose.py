@@ -69,6 +69,8 @@ def compare_pose_directional(user, ref):
         'right_leg': 1.0
     }
 
-    total_score = sum(breakdown[k] * weights[k] for k in breakdown)
     total_weight = sum(weights.values())
-    return round(total_score / total_weight, 2)
+    total_score = round(sum(breakdown[k] * weights[k] for k in breakdown) / total_weight, 2)
+
+
+    return total_score
