@@ -1,10 +1,11 @@
 package capston.capston_spring.controller;
 
 import capston.capston_spring.dto.AccuracySessionResponse;
+import capston.capston_spring.dto.CorrectionResponse;
 import capston.capston_spring.dto.CustomUserDetails;
 import capston.capston_spring.entity.AccuracySession;
-import capston.capston_spring.repository.SongRepository;
 import capston.capston_spring.service.AccuracySessionService;
+import capston.capston_spring.service.SongService;
 import capston.capston_spring.utils.FrameIndexCalculator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -21,7 +22,7 @@ import java.util.Map;
 public class AccuracySessionController {
 
     private final AccuracySessionService accuracySessionService;
-    private final SongRepository songRepository;
+    private final SongService songService;
 
     /** 인증된 사용자 정확도 세션 전체 조회 **/
     @GetMapping("/user/me")
@@ -124,11 +125,13 @@ public class AccuracySessionController {
         try {
             String username = user.getUsername();
             AccuracySession session = accuracySessionService.createAccuracySession(username, songId, "full"); // sessionId 제거됨
-            return ResponseEntity.ok(Map.of(
-                    "message", "full version session created",
-                    "sessionId", session.getId(),
-                    "song_title", songRepository.findById(songId)
-            ));
+
+            CorrectionResponse response = new CorrectionResponse(
+                    "full version session created",
+                    session.getId(),
+                    songService.getSongById(songId).getTitle()
+            );
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
@@ -144,11 +147,12 @@ public class AccuracySessionController {
         try {
             String username = user.getUsername();
             AccuracySession session = accuracySessionService.createAccuracySession(username, songId, "highlight"); // 0415 sessionId 제거
-            return ResponseEntity.ok(Map.of(
-                    "message", "highlight version session created",
-                    "sessionId", session.getId(),
-                    "song_title", songRepository.findById(songId)
-            ));
+            CorrectionResponse response = new CorrectionResponse(
+                    "highlight version session created",
+                    session.getId(),
+                    songService.getSongById(songId).getTitle()
+            );
+            return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
