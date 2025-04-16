@@ -17,7 +17,8 @@ public class AccuracyFrameEvaluation {
     private Long id;
 
     @ManyToOne
-    private AccuracySession session_id;
+    @JoinColumn(name = "session_id", nullable = false)
+    private AccuracySession session;
 
     private Integer frameIndex;
 
