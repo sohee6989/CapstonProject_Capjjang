@@ -54,7 +54,7 @@ public class AccuracySessionController {
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestParam Long songId,
             @RequestParam Long sessionId,
-            @RequestPart MultipartFile image
+            @RequestPart MultipartFile frame
     ) {
         try {
             AccuracySession session = accuracySessionService.getSessionById(sessionId)
@@ -63,7 +63,7 @@ public class AccuracySessionController {
             int frameIndex = FrameIndexCalculator.calculateFrameIndex(session.getStartTime()) * 30;  // FrameIndexCalculator는 초로 받아오는데 전문가 키포인트가 frame 번호로 저장되어있어서 30 곱해줌 -> SuperShy의 fps=30 (만약 일반화 하려면 song entity의 fps를 사용)
 
             return ResponseEntity.ok(
-                    accuracySessionService.analyzeAndStoreFrameStep(user.getUsername(), songId, sessionId, frameIndex, image) // 수정된 서비스 메서드 호출
+                    accuracySessionService.analyzeAndStoreFrameStep(user.getUsername(), songId, sessionId, frameIndex, frame) // 수정된 서비스 메서드 호출
             );
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body(Map.of("error", e.getMessage()));
