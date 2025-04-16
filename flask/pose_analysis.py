@@ -15,7 +15,7 @@ cv2.setNumThreads(4)
 
 
 # 비율 유지하면서 프레임 리사이즈 (여백 추가)
-def resize_with_aspect_ratio(image, target_width, target_height):
+def resize_with_aspect_ratio(image, target_width, target_height): 
     h, w = image.shape[:2]
     scale = min(target_width / w, target_height / h)
     new_w = int(w * scale)
@@ -30,7 +30,8 @@ def resize_with_aspect_ratio(image, target_width, target_height):
     return padded
 
 # 전문가 포즈 1프레임에서 키포인트 추출
-def extract_expert_keypoints(expert_video_path):
+def extract_expert_keypoints(song_title):
+    expert_video_path = f"videos1/{song_title}_expert.mp4"
     cap = cv2.VideoCapture(expert_video_path)
 
     if not cap.isOpened():
@@ -51,10 +52,10 @@ def extract_expert_keypoints(expert_video_path):
             return np.array([[lmk.x, lmk.y, lmk.z] for lmk in result.pose_landmarks.landmark])
         else:
             raise ValueError("전문가 영상에서 포즈를 감지할 수 없습니다.")
-
+            
 # 실시간 프레임 1장 분석용 함수 (Flask /frame API에서 사용)
-def analyze_frame_image(frame_user, exert_video_path):
-    expert_keypoints = extract_expert_keypoints(exert_video_path)
+def analyze_frame_image(frame_user, song_title):
+    expert_keypoints = extract_expert_keypoints(song_title)
 
     with mp_pose.Pose(static_image_mode=True) as pose:
         frame_rgb = cv2.cvtColor(frame_user, cv2.COLOR_BGR2RGB)
@@ -71,9 +72,9 @@ def analyze_frame_image(frame_user, exert_video_path):
                 dist=euclidean
             )
 
-            max_distance = 50.0
+            max_distance = 20.0
             score = max(100 - (distance / max_distance) * 100, 0)
-
+            
             if score >= 90:
                 feedback = "Perfect"
             elif score >= 80:
@@ -91,7 +92,10 @@ def analyze_frame_image(frame_user, exert_video_path):
 
 
 # 기존 웹캠 기반 실시간 분석 및 시각화
-def process_and_compare_videos(*, expert_video_path, silhouette_path):
+def process_and_compare_videos(*, song_title):
+    expert_video_path = f"videos1/{song_title}_expert.mp4"
+    silhouette_path = f"video_uploads/{song_title}_silhouette.mp4"
+
     cap_expert = cv2.VideoCapture(expert_video_path)
     cap_webcam = cv2.VideoCapture(0)
     cap_silhouette = cv2.VideoCapture(silhouette_path)
@@ -153,7 +157,7 @@ def process_and_compare_videos(*, expert_video_path, silhouette_path):
                         dist=euclidean
                     )
 
-                    max_distance = 5.0
+                    max_distance = 20.0
                     score = max(100 - (distance / max_distance) * 100, 0)
 
                     if score >= 90:
