@@ -26,10 +26,12 @@ def resize_with_aspect_ratio(image, target_width, target_height):
 
 
 # 실시간 프레임 분석 API
-@app.route("/frame", methods=["POST"])
+@app.route("/analyze", methods=["POST"])
 def analyze_frame():
     file = request.files.get("frame")
-    song_title = request.form.get("songTitle")
+    song_title = request.form.get("song_title")
+    session_id = request.form.get("session_id")
+    frame_index = request.form.get("frame_index")
 
     if file is None:
         return jsonify({"error": "No frame provided"}), 400
@@ -43,7 +45,8 @@ def analyze_frame():
         return jsonify({"error": "Invalid image"}), 400
 
     try:
-        expert_kps = extract_expert_keypoints(song_title)
+        expert_path, _ = download_temp_from_s3(song_title)
+        expert_kps = extract_expert_keypoints(expert_path)
         score, feedback = analyze_frame_image(image, expert_kps)
         return jsonify({"score": score, "feedback": feedback})
     except Exception as e:
@@ -53,7 +56,7 @@ def analyze_frame():
 # 연습 모드: 실루엣만 오버레이
 @app.route("/practice-mode", methods=["GET"])
 def practice_mode():
-    song_title = request.args.get("songTitle")
+    song_title = request.args.get("song_title")
     if not song_title:
         return jsonify({"error": "songTitle 파라미터가 필요합니다."}), 400
 
@@ -101,7 +104,7 @@ def practice_mode():
 # 정확도 모드: 실루엣 + 점수 + 피드백
 @app.route("/accuracy-mode", methods=["GET"])
 def accuracy_mode():
-    song_title = request.args.get("songTitle")
+    song_title = request.args.get("song_title")
     if not song_title:
         return jsonify({"error": "songTitle 파라미터가 필요합니다."}), 400
 
