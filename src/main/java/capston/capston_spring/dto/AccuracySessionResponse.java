@@ -18,7 +18,7 @@ public class AccuracySessionResponse {
     private SongInfo song;
     private Double score;
     private String feedback;
-    private String accuracyDetails;         // 동작별 정확도 데이터 포함
+    // private String accuracyDetails;         // 동작별 정확도 데이터 포함
     private String mode; // 추가된 부분: mode
     private LocalDateTime startTime;
     private LocalDateTime endTime;
@@ -60,7 +60,7 @@ public class AccuracySessionResponse {
                 SongInfo.from(song),
                 session.getScore(),
                 session.getFeedback(),
-                session.getAccuracyDetails(),
+                // session.getAccuracyDetails(),
                 mode,
                 session.getStartTime(),
                 session.getEndTime(),
