@@ -127,7 +127,6 @@ public class AccuracySessionController {
             AccuracySession session = accuracySessionService.createAccuracySession(username, songId, "full"); // sessionId 제거됨
 
             CorrectionResponse response = new CorrectionResponse(
-                    "full version session created",
                     session.getId(),
                     songService.getSongById(songId).getTitle()
             );
@@ -148,7 +147,6 @@ public class AccuracySessionController {
             String username = user.getUsername();
             AccuracySession session = accuracySessionService.createAccuracySession(username, songId, "highlight"); // 0415 sessionId 제거
             CorrectionResponse response = new CorrectionResponse(
-                    "highlight version session created",
                     session.getId(),
                     songService.getSongById(songId).getTitle()
             );

@@ -6,7 +6,6 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class CorrectionResponse {
-    private String message;
     private Long sessionId;
     private String song_title;
 }
