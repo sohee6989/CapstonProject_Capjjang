@@ -30,8 +30,7 @@ def resize_with_aspect_ratio(image, target_width, target_height):
     return padded
 
 # 전문가 포즈 1프레임에서 키포인트 추출
-def extract_expert_keypoints(song_title):
-    expert_video_path = f"videos1/{song_title}_expert.mp4"
+def extract_expert_keypoints(expert_video_path):
     cap = cv2.VideoCapture(expert_video_path)
 
     if not cap.isOpened():
