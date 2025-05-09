@@ -7,6 +7,7 @@ import capston.capston_spring.entity.RecordedVideo;
 import capston.capston_spring.entity.VideoMode;
 import capston.capston_spring.exception.VideoNotFoundException;
 import capston.capston_spring.service.VideoService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -61,11 +63,25 @@ public class VideoController {
     @PostMapping(value= "/saveVideo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<RecordedVideo> saveRecordedVideo(
             @RequestPart("file") MultipartFile file,
-            @RequestPart("data") RecordedVideoDto recordedVideoDto,
+            @RequestParam("sessionId") Long sessionId,
+            @RequestParam("videoMode") VideoMode videoMode,
+            @RequestParam("recordedAt") String recordedAt,
+            @RequestParam("duration") int duration,
             @AuthenticationPrincipal CustomUserDetails user // 추가: 토큰에서 username 추출
     ) {
-        String username = user.getUsername(); // username 기반 저장
-        return ResponseEntity.ok(videoService.saveRecordedVideo(recordedVideoDto, file, username));
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            RecordedVideoDto dto = new RecordedVideoDto();
+            dto.setSessionId(sessionId);
+            dto.setVideoMode(videoMode);
+            dto.setDuration(duration);
+            dto.setRecordedAt(LocalDateTime.parse(recordedAt)); // ISO8601 string → LocalDateTime
+
+            String username = user.getUsername();
+            return ResponseEntity.ok(videoService.saveRecordedVideo(dto, file, username));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     /** 특정 비디오 수정 (재업로드) **/
