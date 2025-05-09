@@ -10,16 +10,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.core.sync.RequestBody;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -114,7 +113,7 @@ public class VideoService {
         AppUser user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
 
-        String fileName = VIDEO_STORAGE_DIR + UUID.randomUUID().toString() + ".mp4";
+        String fileName = VIDEO_STORAGE_DIR + user.getId() + "_" + dto.getVideoMode() + "_" + dto.getSessionId() + ".mp4";
         String videoUrl = uploadToS3(file, fileName);
 
         RecordedVideo video = convertToEntity(dto, username);
