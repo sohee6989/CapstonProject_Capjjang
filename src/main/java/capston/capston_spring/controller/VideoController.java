@@ -58,7 +58,7 @@ public class VideoController {
     }
 
     /** 녹화된 영상 저장 (DTO 기반) **/
-    @PostMapping("/saveVideo")
+    @PostMapping(value= "/saveVideo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<RecordedVideo> saveRecordedVideo(
             @RequestPart("file") MultipartFile file,
             @RequestPart("data") RecordedVideoDto recordedVideoDto,
