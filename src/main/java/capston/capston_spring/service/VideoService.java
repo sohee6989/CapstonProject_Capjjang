@@ -3,6 +3,7 @@ package capston.capston_spring.service;
 import capston.capston_spring.dto.MyVideoResponse;
 import capston.capston_spring.dto.RecordedVideoDto;
 import capston.capston_spring.entity.*;
+import capston.capston_spring.exception.SessionNotFoundException;
 import capston.capston_spring.exception.UserNotFoundException;
 import capston.capston_spring.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -177,35 +178,29 @@ public class VideoService {
         AppUser user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
 
-        PracticeSession practiceSession = (dto.getPracticeSessionId() != null)
-                ? practiceSessionRepository.findById(dto.getPracticeSessionId()).orElse(null)
-                : null;
-
-        ChallengeSession challengeSession = (dto.getChallengeSessionId() != null)
-                ? challengeSessionRepository.findById(dto.getChallengeSessionId()).orElse(null)
-                : null;
-
-        AccuracySession accuracySession = (dto.getAccuracySessionId() != null)
-                ? accuracySessionRepository.findById(dto.getAccuracySessionId()).orElse(null)
-                : null;
-
         RecordedVideo video = new RecordedVideo();
         video.setUser(user);
-        video.setPracticeSession(practiceSession);
-        video.setChallengeSession(challengeSession);
-        video.setAccuracySession(accuracySession);
         video.setRecordedAt(dto.getRecordedAt());
         video.setDuration(dto.getDuration());
+        video.setMode(dto.getVideoMode());
 
-        // 모드 결정
-        if (practiceSession != null) {
-            video.setMode(VideoMode.PRACTICE);
-        } else if (challengeSession != null) {
-            video.setMode(VideoMode.CHALLENGE);
-        } else if (accuracySession != null) {
-            video.setMode(VideoMode.ACCURACY);
-        } else {
-            throw new IllegalArgumentException("At least one session (practice, challenge, accuracy) must be provided.");
+        switch(dto.getVideoMode()){
+            case PRACTICE -> {
+                PracticeSession practiceSession = practiceSessionRepository.findById(dto.getSessionId())
+                        .orElseThrow(() -> new SessionNotFoundException("PracticeSession not found with id: " + dto.getSessionId()));
+                video.setPracticeSession(practiceSession);
+            }
+            case CHALLENGE -> {
+                ChallengeSession challengeSession = challengeSessionRepository.findById(dto.getSessionId())
+                        .orElseThrow(() -> new RuntimeException("ChallengeSession not found with id: " + dto.getSessionId()));
+                video.setChallengeSession(challengeSession);
+            }
+            case ACCURACY -> {
+                AccuracySession accuracySession = accuracySessionRepository.findById(dto.getSessionId())
+                        .orElseThrow(() -> new RuntimeException("AccuracySession not found with id: " + dto.getSessionId()));
+                video.setAccuracySession(accuracySession);
+            }
+            default -> throw new IllegalArgumentException("Unsupported VideoMode: " + dto.getVideoMode());
         }
 
         return video;
