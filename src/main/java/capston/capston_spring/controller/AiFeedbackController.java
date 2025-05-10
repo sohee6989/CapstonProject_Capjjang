@@ -44,6 +44,12 @@ public class AiFeedbackController {
      * @param sessionId 세션 ID
      * @return 프레임별 피드백 리스트
      */
+    /**
+     * 세션 기반 GPT 피드백 요청 엔드포인트
+     *
+     * @param sessionId 세션 ID
+     * @return 프레임별 피드백 리스트
+     */
     @GetMapping("/api/low-score-feedback")
     public ResponseEntity<?> getLowScoreFeedback(@RequestParam Long sessionId) {
         try {
@@ -51,18 +57,17 @@ public class AiFeedbackController {
 
             if (feedbacks == null || feedbacks.isEmpty()) {
                 return ResponseEntity.status(404)
-                        .body(Map.of("error", "No feedback frames found for session ID: " + sessionId));
+                        .body(Map.of("error", "No low-score frames found for session ID: " + sessionId));
             }
 
             return ResponseEntity.ok(feedbacks);
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                    .body("Invalid session ID: " + e.getMessage());
-
+                    .body(Map.of("error", "Invalid session ID: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
-                    .body("An error occurred while generating feedback: " + e.getMessage());
+                    .body(Map.of("error", "An error occurred while generating feedback: " + e.getMessage()));
         }
     }
 }
