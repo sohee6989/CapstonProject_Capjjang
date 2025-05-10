@@ -41,6 +41,10 @@ public class AccuracySession {
     @Column(nullable = false)
     private String mode;
 
+    /** GPT 피드백 완료 여부 **/
+    @Column(nullable = false)
+    private boolean feedbackCompleted = false;
+    
     // 생성 시간 자동 저장
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
