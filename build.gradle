@@ -32,6 +32,9 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 
+	/** spring webflux **/
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
 	/** dev tools **/
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
@@ -81,4 +84,13 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+
+	def apiKey = project.findProperty("OPENAI_API_KEY")
+	println "DEBUG >>> Gradle OPENAI_API_KEY = ${apiKey}"
+
+	environment "OPENAI_API_KEY", apiKey
+}
+
+bootRun {
+	systemProperties = System.properties
 }
