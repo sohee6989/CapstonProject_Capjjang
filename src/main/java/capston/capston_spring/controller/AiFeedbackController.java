@@ -9,14 +9,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
+import java.util.*;
 
-@RequiredArgsConstructor
 @RestController
+@RequiredArgsConstructor
 public class AiFeedbackController {
 
     private final OpenAiService openAiService;
-
     // 세션 기반 GPT 피드백용 서비스 주입
     private final AccuracySessionService accuracySessionService;
 
@@ -27,11 +26,16 @@ public class AiFeedbackController {
      * @param expertImagePath 전문가 이미지 경로 (Base64로 변환할 파일 경로)
      */
     @GetMapping("/api/image-feedback")
-    public Mono<String> imageFeedback(
+    public Mono<ResponseEntity<String>> imageFeedback(
             @RequestParam String userImagePath,
             @RequestParam String expertImagePath
     ) {
-        return openAiService.getDanceImageFeedback(userImagePath, expertImagePath);
+        return openAiService.getDanceImageFeedback(userImagePath, expertImagePath)
+                .map(ResponseEntity::ok)
+                .onErrorResume(e -> Mono.just(
+                        ResponseEntity.internalServerError()
+                                .body("An error occurred while processing GPT feedback: " + e.getMessage())
+                ));
     }
 
     /**
@@ -41,8 +45,24 @@ public class AiFeedbackController {
      * @return 프레임별 피드백 리스트
      */
     @GetMapping("/api/low-score-feedback")
-    public ResponseEntity<List<String>> getLowScoreFeedback(@RequestParam Long sessionId) {
-        List<String> feedbacks = accuracySessionService.generateLowScoreFeedback(sessionId);
-        return ResponseEntity.ok(feedbacks);
+    public ResponseEntity<?> getLowScoreFeedback(@RequestParam Long sessionId) {
+        try {
+            List<String> feedbacks = accuracySessionService.generateLowScoreFeedback(sessionId);
+
+            if (feedbacks == null || feedbacks.isEmpty()) {
+                return ResponseEntity.status(404)
+                        .body(Map.of("error", "No feedback frames found for session ID: " + sessionId));
+            }
+
+            return ResponseEntity.ok(feedbacks);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body("Invalid session ID: " + e.getMessage());
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body("An error occurred while generating feedback: " + e.getMessage());
+        }
     }
 }
