@@ -24,10 +24,12 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +45,9 @@ public class AccuracySessionService {
     private final AccuracyFrameEvaluationRepository frameEvaluationRepository;
     private final SongRepository songRepository;
     private final UserRepository userRepository;
+
+    // GPT 호출용 OpenAiService 주입
+    private final OpenAiService openAiService;
 
     @Value("${flask.api.analyze}")
     private String flaskAnalyzeUrl;
@@ -122,10 +127,10 @@ public class AccuracySessionService {
 
         ResponseEntity<Map> response = rt.postForEntity(flaskAnalyzeUrl, request, Map.class);
 
-        // 📋 Flask 응답 전체 로그 출력
-        log.info("🔍 Flask 응답 상태: {}", response.getStatusCode());
-        log.info("🔍 Flask 응답 헤더: {}", response.getHeaders());
-        log.info("🔍 Flask 응답 본문: {}", response.getBody());
+        // Flask 응답 전체 로그 출력
+        log.info(" Flask 응답 상태: {}", response.getStatusCode());
+        log.info(" Flask 응답 헤더: {}", response.getHeaders());
+        log.info(" Flask 응답 본문: {}", response.getBody());
 
         if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
             throw new RuntimeException("Flask 분석 실패");
@@ -154,8 +159,6 @@ public class AccuracySessionService {
         return paths;
     }
 
-
-    //0403 수정: 챌린지 세션 시간은 하이라이트 그대로 받아오기
     /** 정확도 세션 시작 - mode (full/highlight) 에 따라 자동 시간 설정 후 저장 **/
     public AccuracySession createAccuracySession(String username, Long songId, String mode) {
         AppUser user = getUserByUsername(username);
@@ -185,5 +188,55 @@ public class AccuracySessionService {
         return accuracySessionRepository.save(session);
     }
 
+    // GPT 피드백 생성 메서드
+    /**
+     * 점수 하위 프레임을 조회하고 GPT로 피드백 생성
+     *
+     * @param sessionId 세션 ID
+     * @return 프레임별 피드백 리스트
+     */
+    public List<String> generateLowScoreFeedback(Long sessionId) {
+        AccuracySession session = accuracySessionRepository.findById(sessionId)
+                .orElseThrow(() -> new SessionNotFoundException("Session not found: " + sessionId));
+
+        List<AccuracyFrameEvaluation> lowScoreFrames =
+                frameEvaluationRepository.findTop5BySessionOrderByScoreAsc(session);
+
+        List<String> feedbackList = new ArrayList<>();
+
+        log.info("[LowScore] 세션 ID {} → 하위 프레임 {}개 조회됨", sessionId, lowScoreFrames.size());
+
+        for (AccuracyFrameEvaluation frame : lowScoreFrames) {
+            Integer frameIndex = frame.getFrameIndex();
+            Double score = frame.getScore();
+            log.info("프레임 번호: {}, 점수: {}", frameIndex, score);
+
+            // 이미지 경로 규칙 (경로는 환경에 맞게 조정 필요)
+            String userImagePath = "./saved_frames/user_" + sessionId + "_frame_" + frameIndex + ".png";
+            String expertImagePath = "./saved_frames/expert_" + sessionId + "_frame_" + frameIndex + ".png";
+
+            try {
+                // GPT 호출
+                String feedback = openAiService.getDanceImageFeedback(userImagePath, expertImagePath)
+                        .block();
+
+                // DB에 피드백 업데이트
+                frame.setFeedback(feedback);
+                frameEvaluationRepository.save(frame);
+
+                feedbackList.add("Frame " + frameIndex + ": " + feedback);
+
+            } catch (Exception e) {
+                log.error("GPT 피드백 생성 실패 (Frame {}): {}", frameIndex, e.getMessage());
+                feedbackList.add("Frame " + frameIndex + ": GPT feedback failed - " + e.getMessage());
+            }
+        }
+
+        // 피드백 완료 상태 업데이트
+        session.setFeedbackCompleted(true);
+        accuracySessionRepository.save(session);
+
+        return feedbackList;
+    }
 
 }
